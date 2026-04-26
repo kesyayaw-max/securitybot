@@ -517,7 +517,7 @@ client.once("clientReady", () => {
   client.user.setPresence({
     activities: [
       {
-        name: "SQS Security System 🛡️",
+        name: "Steak Qurban System 🛡️",
         type: 3, // Watching
       },
     ],
