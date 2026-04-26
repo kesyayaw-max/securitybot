@@ -59,7 +59,7 @@ function modernEmbed(title, desc, color = "Blurple") {
     })
     .setTitle(title)
     .setDescription(desc || "Tidak ada deskripsi.")
-    .setFooter({ text: "Security System • SQS Premium" })
+    .setFooter({ text: "Security System • SQS" })
     .setTimestamp();
 }
 
@@ -183,7 +183,7 @@ function premiumLogEmbed(guild, title, desc, color = "Red") {
   return new EmbedBuilder()
     .setColor(color)
     .setAuthor({
-      name: "SQS Premium Security Log",
+      name: "SQS Security Log",
       iconURL: client.user?.displayAvatarURL(),
     })
     .setTitle(title)
@@ -193,7 +193,7 @@ function premiumLogEmbed(guild, title, desc, color = "Red") {
       { name: "🆔 Guild ID", value: guild?.id || "Unknown", inline: true },
       { name: "⚙️ Security", value: SECURITY_ENABLED ? "ONLINE" : "OFFLINE", inline: true }
     )
-    .setFooter({ text: "SQS Premium Logging • Audit Trail" })
+    .setFooter({ text: "SQS Logging • Audit Trail" })
     .setTimestamp();
 }
 
@@ -262,7 +262,7 @@ async function unlockGuild(guild, executorTag = "System") {
 
 function helpEmbed() {
   return modernEmbed(
-    "🛡️ SQS Premium Commands",
+    "🛡️ SQS Commands",
     [
       "**Prefix Commands**",
       "`sqs panel`, `sqs help`, `sqs ping`, `sqs status`, `sqs toggle`",
