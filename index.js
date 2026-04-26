@@ -513,6 +513,16 @@ async function runAction(ctx, cmd, args = []) {
 
 client.once("clientReady", () => {
   console.log(`Security Bot aktif: ${client.user.tag}`);
+
+  client.user.setPresence({
+    activities: [
+      {
+        name: "SQS Security System 🛡️",
+        type: 3, // Watching
+      },
+    ],
+    status: "dnd",
+  });
 });
 
 // ================= SLASH + BUTTON HANDLER =================
