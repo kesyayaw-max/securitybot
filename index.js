@@ -76,7 +76,7 @@ function statusDescription() {
     "✅ Mass Delete Protection: **ON**",
     "✅ Premium Panel UI: **ON**",
     "",
-    "Mode: **Wick / Dyno Style Protection**",
+    "Mode: **STEAK QURBAN!**",
   ].join("\n");
 }
 
