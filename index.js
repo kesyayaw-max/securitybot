@@ -30,7 +30,8 @@ const dangerMap = new Map();
 
 const BAD_WORDS = ["yatim"];
 
-const OWNER_IDS = process.env.OWNER_IDS?.split(",") || [];
+const OWNER_IDS = process.env.OWNER_IDS?.split(",").map((id) => id.trim()).filter(Boolean) || [];
+let SECURITY_ENABLED = process.env.SECURITY_ENABLED !== "false";
 
 function isAdmin(member) {
   return (
@@ -64,6 +65,8 @@ function modernEmbed(title, desc, color = "Blurple") {
 
 function statusDescription() {
   return [
+    `🛡️ Security Engine: **${SECURITY_ENABLED ? "ONLINE" : "OFFLINE"}**`,
+    "",
     "✅ Anti Spam: **ON**",
     "✅ Anti Invite: **ON**",
     "✅ Anti Badword: **ON**",
@@ -71,34 +74,46 @@ function statusDescription() {
     "✅ Anti Mention Spam: **ON**",
     "✅ Anti Raid: **ON**",
     "✅ Mass Delete Protection: **ON**",
+    "✅ Premium Panel UI: **ON**",
     "",
-    "Mode: **Premium Protection**",
+    "Mode: **Wick / Dyno Style Protection**",
   ].join("\n");
 }
 
 function panelEmbed(guild) {
   return new EmbedBuilder()
-    .setColor("Blurple")
+    .setColor(SECURITY_ENABLED ? "Blurple" : "DarkButNotBlack")
     .setAuthor({
       name: "SteakQurban Security",
       iconURL: client.user?.displayAvatarURL(),
     })
-    .setTitle("🛡️ Premium Security Control Panel")
-    .setDescription("Dashboard keamanan modern untuk kontrol cepat server.")
+    .setTitle("🛡️ SQS Premium Security Panel")
+    .setDescription(
+      [
+        "```ansi",
+        `\u001b[1;36mSYSTEM\u001b[0m   : SQS Premium`,
+        `\u001b[1;35mMODE\u001b[0m     : Wick / Dyno Style`,
+        `\u001b[1;32mSTATUS\u001b[0m   : ${SECURITY_ENABLED ? "ONLINE" : "OFFLINE"}`,
+        "```",
+        "Gunakan tombol di bawah untuk mengontrol keamanan server secara cepat.",
+      ].join("\n")
+    )
     .addFields(
       {
-        name: "Protection",
-        value: "✅ Anti Spam\n✅ Anti Invite\n✅ Anti Badword\n✅ Anti Mention\n✅ Anti Caps\n✅ Anti Raid",
+        name: "🛡️ Protection",
+        value:
+          "✅ Anti Spam\n✅ Anti Invite\n✅ Anti Badword\n✅ Anti Mention\n✅ Anti Caps\n✅ Anti Raid",
         inline: true,
       },
       {
-        name: "Moderation",
-        value: "✅ Lock / Unlock\n✅ Lockdown\n✅ Clear Messages\n✅ Timeout\n✅ Ban / Kick\n✅ Warn System",
+        name: "⚔️ Moderation",
+        value:
+          "✅ Lock / Unlock\n✅ Lockdown\n✅ Clear Messages\n✅ Timeout\n✅ Ban / Kick\n✅ Warn System",
         inline: true,
       },
       {
-        name: "Server",
-        value: `**${guild.name}**\nMembers: **${guild.memberCount ?? "Unknown"}**`,
+        name: "📊 Server",
+        value: `**${guild.name}**\nMembers: **${guild.memberCount ?? "Unknown"}**\nPing: **${client.ws.ping}ms**`,
         inline: false,
       }
     )
@@ -142,19 +157,50 @@ function panelRows() {
       .setEmoji("✅")
       .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
+      .setCustomId("sqs_panel_toggle")
+      .setLabel(SECURITY_ENABLED ? "Security ON" : "Security OFF")
+      .setEmoji("🛡️")
+      .setStyle(SECURITY_ENABLED ? ButtonStyle.Success : ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId("sqs_panel_refresh")
+      .setLabel("Refresh")
+      .setEmoji("🔄")
+      .setStyle(ButtonStyle.Primary)
+  );
+
+  const row3 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
       .setCustomId("sqs_panel_help")
       .setLabel("Help")
       .setEmoji("📘")
       .setStyle(ButtonStyle.Primary)
   );
 
-  return [row1, row2];
+  return [row1, row2, row3];
+}
+
+function premiumLogEmbed(guild, title, desc, color = "Red") {
+  return new EmbedBuilder()
+    .setColor(color)
+    .setAuthor({
+      name: "SQS Premium Security Log",
+      iconURL: client.user?.displayAvatarURL(),
+    })
+    .setTitle(title)
+    .setDescription(desc || "Tidak ada detail.")
+    .addFields(
+      { name: "🏠 Server", value: guild?.name || "Unknown", inline: true },
+      { name: "🆔 Guild ID", value: guild?.id || "Unknown", inline: true },
+      { name: "⚙️ Security", value: SECURITY_ENABLED ? "ONLINE" : "OFFLINE", inline: true }
+    )
+    .setFooter({ text: "SQS Premium Logging • Audit Trail" })
+    .setTimestamp();
 }
 
 async function sendLog(guild, title, desc, color = "Red") {
   const ch = guild.channels.cache.get(process.env.LOG_CHANNEL_ID);
   if (!ch) return;
-  await ch.send({ embeds: [modernEmbed(title, desc, color)] }).catch(() => {});
+  await ch.send({ embeds: [premiumLogEmbed(guild, title, desc, color)] }).catch(() => {});
 }
 
 function parseDuration(input) {
@@ -219,7 +265,7 @@ function helpEmbed() {
     "🛡️ SQS Premium Commands",
     [
       "**Prefix Commands**",
-      "`sqs panel`, `sqs help`, `sqs ping`, `sqs status`",
+      "`sqs panel`, `sqs help`, `sqs ping`, `sqs status`, `sqs toggle`",
       "`sqs clear 10`, `sqs lock`, `sqs unlock`",
       "`sqs lockdown`, `sqs unlockall`",
       "`sqs warn @user alasan`, `sqs warnings @user`, `sqs clearwarn @user`",
@@ -449,6 +495,19 @@ async function runAction(ctx, cmd, args = []) {
     return reply({ embeds: [modernEmbed("✅ Untimeout", `${target} sudah bebas timeout.`, "Green")] });
   }
 
+  if (cmd === "toggle") {
+    SECURITY_ENABLED = !SECURITY_ENABLED;
+    await sendLog(
+      guild,
+      "🛡️ Security Toggle",
+      `Executor: ${user}\nNew Status: **${SECURITY_ENABLED ? "ONLINE" : "OFFLINE"}**`,
+      SECURITY_ENABLED ? "Green" : "Orange"
+    );
+    return reply({
+      embeds: [modernEmbed("🛡️ Security Toggle", `Security sekarang: **${SECURITY_ENABLED ? "ONLINE" : "OFFLINE"}**`, SECURITY_ENABLED ? "Green" : "Orange")],
+    });
+  }
+
   return reply({ embeds: [modernEmbed("❔ Unknown Command", "Gunakan `sqs help` atau `/panel`.", "Orange")] });
 }
 
@@ -517,6 +576,27 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
     }
+
+    if (id === "sqs_panel_toggle") {
+      SECURITY_ENABLED = !SECURITY_ENABLED;
+      await sendLog(
+        interaction.guild,
+        "🛡️ Security Toggle",
+        `Executor: ${interaction.user}\nNew Status: **${SECURITY_ENABLED ? "ONLINE" : "OFFLINE"}**`,
+        SECURITY_ENABLED ? "Green" : "Orange"
+      );
+      return interaction.update({
+        embeds: [panelEmbed(interaction.guild)],
+        components: panelRows(),
+      });
+    }
+
+    if (id === "sqs_panel_refresh") {
+      return interaction.update({
+        embeds: [panelEmbed(interaction.guild)],
+        components: panelRows(),
+      });
+    }
   } catch (err) {
     console.error("INTERACTION ERROR:", err);
     const payload = {
@@ -535,6 +615,8 @@ client.on("messageCreate", async (message) => {
 
   const member = message.member;
   const content = message.content;
+
+  if (!SECURITY_ENABLED && !content.toLowerCase().startsWith(PREFIX)) return;
 
   const inviteRegex = /(discord\.gg|discord\.com\/invite|discordapp\.com\/invite)/i;
 
@@ -668,65 +750,6 @@ client.on("roleDelete", async (role) => {
   if (!role.guild) return;
   handleDangerDelete(role.guild, "role");
 });
-
-// ================= PREMIUM PANEL UI =================
-let SECURITY_ENABLED = true;
-
-client.on("interactionCreate", async (interaction) => {
-  if (!interaction.isButton()) return;
-
-  if (
-    !interaction.member.permissions.has(PermissionsBitField.Flags.Administrator) &&
-    !process.env.OWNER_IDS?.split(",").includes(interaction.member.id)
-  ) {
-    return interaction.reply({ content: "❌ Admin only", ephemeral: true });
-  }
-
-  if (interaction.customId === "toggle_security") {
-    SECURITY_ENABLED = !SECURITY_ENABLED;
-
-    return interaction.update({
-      embeds: [
-        modernEmbed(
-          "🛡️ Security Panel",
-          `Status: **${SECURITY_ENABLED ? "ON" : "OFF"}**`
-        ),
-      ],
-    });
-  }
-});
-
-// COMMAND PANEL
-client.on("messageCreate", async (message) => {
-  if (!message.content.startsWith(PREFIX)) return;
-
-  const args = message.content.slice(PREFIX.length).trim().split(/ +/);
-  const cmd = args.shift()?.toLowerCase();
-
-  if (cmd === "panel") {
-    if (!isAdmin(message.member)) {
-      return message.reply("❌ Admin only");
-    }
-
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("toggle_security")
-        .setLabel("Toggle Security")
-        .setStyle(ButtonStyle.Primary)
-    );
-
-    return message.reply({
-      embeds: [
-        modernEmbed(
-          "🛡️ SQS Premium Panel",
-          `Security Status: **${SECURITY_ENABLED ? "ON" : "OFF"}**`
-        ),
-      ],
-      components: [row],
-    });
-  }
-});
-
 
 client.login(process.env.TOKEN).catch((err) => {
   console.error("LOGIN ERROR:", err.message);
