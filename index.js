@@ -8,7 +8,7 @@ const {
   AuditLogEvent,
   ActionRowBuilder,
   ButtonBuilder,
-  ButtonStyle,
+  ButtonStyle
 } = require("discord.js");
 
 const PREFIX = "sqs";
@@ -668,6 +668,71 @@ client.on("roleDelete", async (role) => {
   if (!role.guild) return;
   handleDangerDelete(role.guild, "role");
 });
+
+// ================= PREMIUM PANEL UI =================
+const {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle
+} = require("discord.js");
+
+let SECURITY_ENABLED = true;
+
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isButton()) return;
+
+  if (
+    !interaction.member.permissions.has(PermissionsBitField.Flags.Administrator) &&
+    !process.env.OWNER_IDS?.split(",").includes(interaction.member.id)
+  ) {
+    return interaction.reply({ content: "❌ Admin only", ephemeral: true });
+  }
+
+  if (interaction.customId === "toggle_security") {
+    SECURITY_ENABLED = !SECURITY_ENABLED;
+
+    return interaction.update({
+      embeds: [
+        modernEmbed(
+          "🛡️ Security Panel",
+          `Status: **${SECURITY_ENABLED ? "ON" : "OFF"}**`
+        ),
+      ],
+    });
+  }
+});
+
+// COMMAND PANEL
+client.on("messageCreate", async (message) => {
+  if (!message.content.startsWith(PREFIX)) return;
+
+  const args = message.content.slice(PREFIX.length).trim().split(/ +/);
+  const cmd = args.shift()?.toLowerCase();
+
+  if (cmd === "panel") {
+    if (!isAdmin(message.member)) {
+      return message.reply("❌ Admin only");
+    }
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("toggle_security")
+        .setLabel("Toggle Security")
+        .setStyle(ButtonStyle.Primary)
+    );
+
+    return message.reply({
+      embeds: [
+        modernEmbed(
+          "🛡️ SQS Premium Panel",
+          `Security Status: **${SECURITY_ENABLED ? "ON" : "OFF"}**`
+        ),
+      ],
+      components: [row],
+    });
+  }
+});
+
 
 client.login(process.env.TOKEN).catch((err) => {
   console.error("LOGIN ERROR:", err.message);
