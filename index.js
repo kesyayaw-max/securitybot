@@ -670,12 +670,6 @@ client.on("roleDelete", async (role) => {
 });
 
 // ================= PREMIUM PANEL UI =================
-const {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle
-} = require("discord.js");
-
 let SECURITY_ENABLED = true;
 
 client.on("interactionCreate", async (interaction) => {
