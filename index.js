@@ -91,8 +91,8 @@ function panelEmbed(guild) {
     .setDescription(
       [
         "```ansi",
-        `\u001b[1;36mSYSTEM\u001b[0m   : SQS Premium`,
-        `\u001b[1;35mMODE\u001b[0m     : Wick / Dyno Style`,
+        `\u001b[1;36mSYSTEM\u001b[0m   : Steak Qurban Security`,
+        `\u001b[1;35mMODE\u001b[0m     : Steak Qurban Protection`,
         `\u001b[1;32mSTATUS\u001b[0m   : ${SECURITY_ENABLED ? "ONLINE" : "OFFLINE"}`,
         "```",
         "Gunakan tombol di bawah untuk mengontrol keamanan server secara cepat.",
