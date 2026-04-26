@@ -30,8 +30,13 @@ const dangerMap = new Map();
 
 const BAD_WORDS = ["yatim"];
 
+const OWNER_IDS = process.env.OWNER_IDS?.split(",") || [];
+
 function isAdmin(member) {
-  return Boolean(member?.permissions?.has(PermissionsBitField.Flags.Administrator));
+  return (
+    member.permissions.has(PermissionsBitField.Flags.Administrator) ||
+    OWNER_IDS.includes(member.id)
+  );
 }
 
 function isWhitelisted(member) {
