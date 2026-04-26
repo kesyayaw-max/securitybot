@@ -1,4 +1,3 @@
-
 require("dotenv").config();
 
 const {
@@ -32,7 +31,7 @@ const dangerMap = new Map();
 const BAD_WORDS = ["yatim"];
 
 function isAdmin(member) {
-  return member?.permissions?.has(PermissionsBitField.Flags.Administrator);
+  return Boolean(member?.permissions?.has(PermissionsBitField.Flags.Administrator));
 }
 
 function isWhitelisted(member) {
@@ -53,9 +52,23 @@ function modernEmbed(title, desc, color = "Blurple") {
       iconURL: client.user?.displayAvatarURL(),
     })
     .setTitle(title)
-    .setDescription(desc)
+    .setDescription(desc || "Tidak ada deskripsi.")
     .setFooter({ text: "Security System • SQS Premium" })
     .setTimestamp();
+}
+
+function statusDescription() {
+  return [
+    "✅ Anti Spam: **ON**",
+    "✅ Anti Invite: **ON**",
+    "✅ Anti Badword: **ON**",
+    "✅ Anti Caps Spam: **ON**",
+    "✅ Anti Mention Spam: **ON**",
+    "✅ Anti Raid: **ON**",
+    "✅ Mass Delete Protection: **ON**",
+    "",
+    "Mode: **Premium Protection**",
+  ].join("\n");
 }
 
 function panelEmbed(guild) {
@@ -66,33 +79,21 @@ function panelEmbed(guild) {
       iconURL: client.user?.displayAvatarURL(),
     })
     .setTitle("🛡️ Premium Security Control Panel")
-    .setDescription(
-      [
-        "Kontrol keamanan server langsung dari tombol modern di bawah.",
-        "",
-        "```ansi",
-        "\u001b[1;36mSTATUS\u001b[0m  : Online",
-        "\u001b[1;32mMODE\u001b[0m    : Protection Active",
-        "\u001b[1;35mSYSTEM\u001b[0m  : SQS Premium",
-        "```",
-      ].join("\n")
-    )
+    .setDescription("Dashboard keamanan modern untuk kontrol cepat server.")
     .addFields(
       {
         name: "Protection",
-        value:
-          "✅ Anti Spam\n✅ Anti Invite\n✅ Anti Badword\n✅ Anti Mention Spam\n✅ Anti Caps\n✅ Anti Raid",
+        value: "✅ Anti Spam\n✅ Anti Invite\n✅ Anti Badword\n✅ Anti Mention\n✅ Anti Caps\n✅ Anti Raid",
         inline: true,
       },
       {
         name: "Moderation",
-        value:
-          "✅ Lock / Unlock\n✅ Lockdown\n✅ Clear Messages\n✅ Timeout\n✅ Ban / Kick\n✅ Warn System",
+        value: "✅ Lock / Unlock\n✅ Lockdown\n✅ Clear Messages\n✅ Timeout\n✅ Ban / Kick\n✅ Warn System",
         inline: true,
       },
       {
         name: "Server",
-        value: `**${guild.name}**\nMembers: **${guild.memberCount}**`,
+        value: `**${guild.name}**\nMembers: **${guild.memberCount ?? "Unknown"}**`,
         inline: false,
       }
     )
@@ -109,16 +110,16 @@ function panelRows() {
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId("sqs_panel_lock")
-      .setLabel("Lock Channel")
+      .setLabel("Lock")
       .setEmoji("🔒")
       .setStyle(ButtonStyle.Danger),
     new ButtonBuilder()
       .setCustomId("sqs_panel_unlock")
-      .setLabel("Unlock Channel")
+      .setLabel("Unlock")
       .setEmoji("🔓")
       .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
-      .setCustomId("sqs_panel_clear")
+      .setCustomId("sqs_panel_clear10")
       .setLabel("Clear 10")
       .setEmoji("🧹")
       .setStyle(ButtonStyle.Secondary)
@@ -136,9 +137,9 @@ function panelRows() {
       .setEmoji("✅")
       .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
-      .setCustomId("sqs_panel_refresh")
-      .setLabel("Refresh Panel")
-      .setEmoji("🔄")
+      .setCustomId("sqs_panel_help")
+      .setLabel("Help")
+      .setEmoji("📘")
       .setStyle(ButtonStyle.Primary)
   );
 
@@ -148,7 +149,7 @@ function panelRows() {
 async function sendLog(guild, title, desc, color = "Red") {
   const ch = guild.channels.cache.get(process.env.LOG_CHANNEL_ID);
   if (!ch) return;
-  ch.send({ embeds: [modernEmbed(title, desc, color)] }).catch(() => {});
+  await ch.send({ embeds: [modernEmbed(title, desc, color)] }).catch(() => {});
 }
 
 function parseDuration(input) {
@@ -156,7 +157,7 @@ function parseDuration(input) {
   const match = input.match(/^(\d+)(s|m|h|d)$/i);
   if (!match) return null;
 
-  const num = parseInt(match[1]);
+  const num = parseInt(match[1], 10);
   const unit = match[2].toLowerCase();
 
   if (unit === "s") return num * 1000;
@@ -200,7 +201,7 @@ async function unlockGuild(guild, executorTag = "System") {
 
   await sendLog(
     guild,
-    "✅ Lockdown Released",
+    "✅ Lockdown Removed",
     `Executor: **${executorTag}**\nUnlocked channels: **${count}**`,
     "Green"
   );
@@ -208,22 +209,322 @@ async function unlockGuild(guild, executorTag = "System") {
   return count;
 }
 
-async function replyAdminOnly(interaction) {
-  if (isAdmin(interaction.member)) return true;
+function helpEmbed() {
+  return modernEmbed(
+    "🛡️ SQS Premium Commands",
+    [
+      "**Prefix Commands**",
+      "`sqs panel`, `sqs help`, `sqs ping`, `sqs status`",
+      "`sqs clear 10`, `sqs lock`, `sqs unlock`",
+      "`sqs lockdown`, `sqs unlockall`",
+      "`sqs warn @user alasan`, `sqs warnings @user`, `sqs clearwarn @user`",
+      "`sqs ban @user alasan`, `sqs kick @user alasan`",
+      "`sqs timeout @user 10m alasan`, `sqs untimeout @user`",
+      "",
+      "**Slash Commands**",
+      "`/panel`, `/status`, `/ping`, `/clear`, `/lock`, `/unlock`, `/lockdown`, `/unlockall`",
+    ].join("\n"),
+    "Blurple"
+  );
+}
 
-  await interaction.reply({
+async function ensureAdminReply(ctx) {
+  const member = ctx.member;
+  if (isAdmin(member)) return true;
+
+  const payload = {
     embeds: [modernEmbed("❌ Access Denied", "Command ini khusus admin.", "Red")],
     ephemeral: true,
-  }).catch(() => {});
+  };
+
+  if (ctx.isChatInputCommand?.() || ctx.isButton?.()) {
+    await ctx.reply(payload).catch(() => {});
+  } else {
+    await ctx.reply({ embeds: payload.embeds }).catch(() => {});
+  }
 
   return false;
+}
+
+async function runAction(ctx, cmd, args = []) {
+  const isInteraction = Boolean(ctx.isChatInputCommand?.());
+  const guild = ctx.guild;
+  const channel = ctx.channel;
+  const member = ctx.member;
+  const user = ctx.user || ctx.author;
+
+  if (!(await ensureAdminReply(ctx))) return;
+
+  const reply = async (payload) => {
+    if (isInteraction) {
+      if (ctx.replied || ctx.deferred) return ctx.followUp(payload);
+      return ctx.reply(payload);
+    }
+    return ctx.reply(payload);
+  };
+
+  if (cmd === "help") {
+    return reply({ embeds: [helpEmbed()] });
+  }
+
+  if (cmd === "panel") {
+    return reply({ embeds: [panelEmbed(guild)], components: panelRows() });
+  }
+
+  if (cmd === "ping") {
+    return reply({
+      embeds: [modernEmbed("🏓 Pong", `Latency: **${client.ws.ping}ms**`, "Green")],
+    });
+  }
+
+  if (cmd === "status") {
+    return reply({
+      embeds: [modernEmbed("🛡️ Security Status", statusDescription(), "Green")],
+    });
+  }
+
+  if (cmd === "clear") {
+    const amount = isInteraction
+      ? ctx.options.getInteger("amount")
+      : parseInt(args[0], 10);
+
+    if (!amount || amount < 1 || amount > 100) {
+      return reply({ content: "Gunakan: `sqs clear 10` atau `/clear amount:10`", ephemeral: true });
+    }
+
+    await channel.bulkDelete(amount, true).catch(() => {});
+    return reply({
+      embeds: [modernEmbed("🧹 Messages Cleared", `Berhasil hapus **${amount}** pesan.`, "Green")],
+      ephemeral: true,
+    });
+  }
+
+  if (cmd === "lock") {
+    await channel.permissionOverwrites.edit(guild.roles.everyone, { SendMessages: false });
+    await sendLog(guild, "🔒 Channel Locked", `${channel} dikunci oleh ${user}`, "Orange");
+    return reply({ embeds: [modernEmbed("🔒 Locked", "Channel ini dikunci.", "Orange")] });
+  }
+
+  if (cmd === "unlock") {
+    await channel.permissionOverwrites.edit(guild.roles.everyone, { SendMessages: null });
+    await sendLog(guild, "🔓 Channel Unlocked", `${channel} dibuka oleh ${user}`, "Green");
+    return reply({ embeds: [modernEmbed("🔓 Unlocked", "Channel ini dibuka.", "Green")] });
+  }
+
+  if (cmd === "lockdown") {
+    const count = await lockdownGuild(guild, user.tag);
+    return reply({ embeds: [modernEmbed("🚨 Lockdown", `Semua channel berhasil dikunci.\nTotal: **${count}**`, "DarkRed")] });
+  }
+
+  if (cmd === "unlockall") {
+    const count = await unlockGuild(guild, user.tag);
+    return reply({ embeds: [modernEmbed("✅ Unlock All", `Semua channel berhasil dibuka.\nTotal: **${count}**`, "Green")] });
+  }
+
+  if (cmd === "warn") {
+    const target = isInteraction
+      ? ctx.options.getMember("user")
+      : ctx.mentions.members.first();
+
+    const reason = isInteraction
+      ? (ctx.options.getString("reason") || "Tidak ada alasan")
+      : (args.slice(1).join(" ") || "Tidak ada alasan");
+
+    if (!target) return reply({ content: "Gunakan: `sqs warn @user alasan`", ephemeral: true });
+
+    const key = `${guild.id}-${target.id}`;
+    if (!warnMap.has(key)) warnMap.set(key, []);
+
+    warnMap.get(key).push({
+      reason,
+      mod: user.tag,
+      time: new Date().toLocaleString("id-ID"),
+    });
+
+    await sendLog(guild, "⚠️ User Warned", `User: ${target}\nMod: ${user}\nReason: ${reason}`, "Orange");
+    return reply({ embeds: [modernEmbed("⚠️ Warn Added", `${target} diberi warning.\nReason: **${reason}**`, "Orange")] });
+  }
+
+  if (cmd === "warnings") {
+    const target = isInteraction
+      ? ctx.options.getMember("user")
+      : ctx.mentions.members.first();
+
+    if (!target) return reply({ content: "Gunakan: `sqs warnings @user`", ephemeral: true });
+
+    const key = `${guild.id}-${target.id}`;
+    const warns = warnMap.get(key) || [];
+
+    if (!warns.length) {
+      return reply({ embeds: [modernEmbed("✅ Clean", `${target} tidak punya warning.`, "Green")] });
+    }
+
+    const list = warns
+      .map((w, i) => `**${i + 1}.** ${w.reason}\nMod: ${w.mod}\nTime: ${w.time}`)
+      .join("\n\n");
+
+    return reply({ embeds: [modernEmbed(`⚠️ Warnings: ${target.user.tag}`, list, "Orange")] });
+  }
+
+  if (cmd === "clearwarn") {
+    const target = isInteraction
+      ? ctx.options.getMember("user")
+      : ctx.mentions.members.first();
+
+    if (!target) return reply({ content: "Gunakan: `sqs clearwarn @user`", ephemeral: true });
+
+    warnMap.delete(`${guild.id}-${target.id}`);
+    return reply({ embeds: [modernEmbed("✅ Warnings Cleared", `Warning ${target} sudah dihapus.`, "Green")] });
+  }
+
+  if (cmd === "ban") {
+    const target = isInteraction
+      ? ctx.options.getMember("user")
+      : ctx.mentions.members.first();
+
+    const reason = isInteraction
+      ? (ctx.options.getString("reason") || "Tidak ada alasan")
+      : (args.slice(1).join(" ") || "Tidak ada alasan");
+
+    if (!target) return reply({ content: "Gunakan: `sqs ban @user alasan`", ephemeral: true });
+
+    await target.ban({ reason }).catch(() => null);
+    await sendLog(guild, "🔨 User Banned", `User: ${target.user.tag}\nMod: ${user.tag}\nReason: ${reason}`, "Red");
+    return reply({ embeds: [modernEmbed("🔨 Banned", `${target.user.tag} diban.\nReason: ${reason}`, "Red")] });
+  }
+
+  if (cmd === "kick") {
+    const target = isInteraction
+      ? ctx.options.getMember("user")
+      : ctx.mentions.members.first();
+
+    const reason = isInteraction
+      ? (ctx.options.getString("reason") || "Tidak ada alasan")
+      : (args.slice(1).join(" ") || "Tidak ada alasan");
+
+    if (!target) return reply({ content: "Gunakan: `sqs kick @user alasan`", ephemeral: true });
+
+    await target.kick(reason).catch(() => null);
+    await sendLog(guild, "👢 User Kicked", `User: ${target.user.tag}\nMod: ${user.tag}\nReason: ${reason}`, "Orange");
+    return reply({ embeds: [modernEmbed("👢 Kicked", `${target.user.tag} dikick.\nReason: ${reason}`, "Orange")] });
+  }
+
+  if (cmd === "timeout") {
+    const target = isInteraction
+      ? ctx.options.getMember("user")
+      : ctx.mentions.members.first();
+
+    const durationInput = isInteraction
+      ? ctx.options.getString("duration")
+      : args[1];
+
+    const reason = isInteraction
+      ? (ctx.options.getString("reason") || "Tidak ada alasan")
+      : (args.slice(2).join(" ") || "Tidak ada alasan");
+
+    const duration = parseDuration(durationInput);
+    if (!target || !duration) {
+      return reply({ content: "Gunakan: `sqs timeout @user 10m alasan`", ephemeral: true });
+    }
+
+    await target.timeout(duration, reason).catch(() => null);
+    await sendLog(guild, "⏳ User Timeout", `User: ${target}\nDurasi: ${durationInput}\nReason: ${reason}`, "Orange");
+    return reply({ embeds: [modernEmbed("⏳ Timeout", `${target} timeout **${durationInput}**.\nReason: ${reason}`, "Orange")] });
+  }
+
+  if (cmd === "untimeout") {
+    const target = isInteraction
+      ? ctx.options.getMember("user")
+      : ctx.mentions.members.first();
+
+    if (!target) return reply({ content: "Gunakan: `sqs untimeout @user`", ephemeral: true });
+
+    await target.timeout(null).catch(() => null);
+    await sendLog(guild, "✅ Timeout Removed", `User: ${target}\nMod: ${user}`, "Green");
+    return reply({ embeds: [modernEmbed("✅ Untimeout", `${target} sudah bebas timeout.`, "Green")] });
+  }
+
+  return reply({ embeds: [modernEmbed("❔ Unknown Command", "Gunakan `sqs help` atau `/panel`.", "Orange")] });
 }
 
 client.once("clientReady", () => {
   console.log(`Security Bot aktif: ${client.user.tag}`);
 });
 
-// ================= AUTO MOD MESSAGE SECURITY =================
+// ================= SLASH + BUTTON HANDLER =================
+client.on("interactionCreate", async (interaction) => {
+  try {
+    if (interaction.isChatInputCommand()) {
+      return runAction(interaction, interaction.commandName);
+    }
+
+    if (!interaction.isButton()) return;
+
+    if (!(await ensureAdminReply(interaction))) return;
+
+    const id = interaction.customId;
+
+    if (id === "sqs_panel_status") {
+      return interaction.reply({
+        embeds: [modernEmbed("📊 Security Status", statusDescription(), "Green")],
+        ephemeral: true,
+      });
+    }
+
+    if (id === "sqs_panel_help") {
+      return interaction.reply({ embeds: [helpEmbed()], ephemeral: true });
+    }
+
+    if (id === "sqs_panel_lock") {
+      await interaction.channel.permissionOverwrites.edit(interaction.guild.roles.everyone, {
+        SendMessages: false,
+      });
+      await sendLog(interaction.guild, "🔒 Channel Locked", `${interaction.channel} dikunci oleh ${interaction.user}`, "Orange");
+      return interaction.reply({ embeds: [modernEmbed("🔒 Locked", "Channel ini dikunci.", "Orange")] });
+    }
+
+    if (id === "sqs_panel_unlock") {
+      await interaction.channel.permissionOverwrites.edit(interaction.guild.roles.everyone, {
+        SendMessages: null,
+      });
+      await sendLog(interaction.guild, "🔓 Channel Unlocked", `${interaction.channel} dibuka oleh ${interaction.user}`, "Green");
+      return interaction.reply({ embeds: [modernEmbed("🔓 Unlocked", "Channel ini dibuka.", "Green")] });
+    }
+
+    if (id === "sqs_panel_lockdown") {
+      const count = await lockdownGuild(interaction.guild, interaction.user.tag);
+      return interaction.reply({
+        embeds: [modernEmbed("🚨 Lockdown", `Semua channel berhasil dikunci.\nTotal: **${count}**`, "DarkRed")],
+      });
+    }
+
+    if (id === "sqs_panel_unlockall") {
+      const count = await unlockGuild(interaction.guild, interaction.user.tag);
+      return interaction.reply({
+        embeds: [modernEmbed("✅ Unlock All", `Semua channel berhasil dibuka.\nTotal: **${count}**`, "Green")],
+      });
+    }
+
+    if (id === "sqs_panel_clear10") {
+      await interaction.channel.bulkDelete(10, true).catch(() => {});
+      return interaction.reply({
+        embeds: [modernEmbed("🧹 Clear 10", "10 pesan terakhir berhasil dihapus.", "Green")],
+        ephemeral: true,
+      });
+    }
+  } catch (err) {
+    console.error("INTERACTION ERROR:", err);
+    const payload = {
+      embeds: [modernEmbed("❌ Interaction Error", "Terjadi error saat menjalankan command/button.", "Red")],
+      ephemeral: true,
+    };
+
+    if (interaction.replied || interaction.deferred) return interaction.followUp(payload).catch(() => {});
+    return interaction.reply(payload).catch(() => {});
+  }
+});
+
+// ================= MESSAGE SECURITY + PREFIX COMMANDS =================
 client.on("messageCreate", async (message) => {
   if (!message.guild || message.author.bot) return;
 
@@ -231,10 +532,11 @@ client.on("messageCreate", async (message) => {
   const content = message.content;
 
   const inviteRegex = /(discord\.gg|discord\.com\/invite|discordapp\.com\/invite)/i;
+
   if (inviteRegex.test(content) && !canBypass(member)) {
     await message.delete().catch(() => {});
     await member.timeout(5 * 60 * 1000, "Anti invite").catch(() => {});
-    await sendLog(message.guild, "🔗 Anti Invite", `User: ${message.author}\nAction: **Delete + Timeout 5 menit**`, "Red");
+    await sendLog(message.guild, "🔗 Anti Invite Triggered", `User: ${message.author}\nAction: **Delete + Timeout 5 menit**`, "Red");
     return;
   }
 
@@ -242,7 +544,7 @@ client.on("messageCreate", async (message) => {
   if (BAD_WORDS.some((word) => lower.includes(word)) && !canBypass(member)) {
     await message.delete().catch(() => {});
     await member.timeout(3 * 60 * 1000, "Badword").catch(() => {});
-    await sendLog(message.guild, "🤬 Anti Badword", `User: ${message.author}\nAction: **Delete + Timeout 3 menit**`, "Orange");
+    await sendLog(message.guild, "🤬 Anti Badword Triggered", `User: ${message.author}\nAction: **Delete + Timeout 3 menit**`, "Orange");
     return;
   }
 
@@ -250,12 +552,13 @@ client.on("messageCreate", async (message) => {
   if (mentionCount >= 5 && !canBypass(member)) {
     await message.delete().catch(() => {});
     await member.timeout(10 * 60 * 1000, "Mention spam").catch(() => {});
-    await sendLog(message.guild, "📢 Anti Mention Spam", `User: ${message.author}\nMentions: **${mentionCount}**\nAction: **Timeout 10 menit**`, "Red");
+    await sendLog(message.guild, "📢 Anti Mention Spam", `User: ${message.author}\nMention: **${mentionCount}**\nAction: **Timeout 10 menit**`, "Red");
     return;
   }
 
   const letters = content.replace(/[^a-zA-Z]/g, "");
   const caps = content.replace(/[^A-Z]/g, "");
+
   if (letters.length >= 12 && caps.length / letters.length >= 0.8 && !canBypass(member)) {
     await message.delete().catch(() => {});
     await member.timeout(2 * 60 * 1000, "Caps spam").catch(() => {});
@@ -265,6 +568,7 @@ client.on("messageCreate", async (message) => {
 
   const now = Date.now();
   const id = message.author.id;
+
   if (!spamMap.has(id)) spamMap.set(id, []);
 
   const timestamps = spamMap.get(id).filter((t) => now - t < 7000);
@@ -274,219 +578,16 @@ client.on("messageCreate", async (message) => {
   if (timestamps.length >= 5 && !canBypass(member)) {
     await member.timeout(10 * 60 * 1000, "Spam").catch(() => {});
     spamMap.set(id, []);
-    await sendLog(message.guild, "⚡ Anti Spam", `User: ${message.author}\nAction: **Timeout 10 menit**`, "Red");
+    await sendLog(message.guild, "⚡ Anti Spam Triggered", `User: ${message.author}\nAction: **Timeout 10 menit**`, "Red");
+    return;
   }
-});
 
-// ================= SLASH COMMANDS + BUTTON UI =================
-client.on("interactionCreate", async (interaction) => {
-  try {
-    if (interaction.isButton()) {
-      if (!(await replyAdminOnly(interaction))) return;
-      const id = interaction.customId;
+  if (!content.toLowerCase().startsWith(PREFIX)) return;
 
-      if (id === "sqs_panel_status") {
-        return interaction.reply({
-          embeds: [
-            modernEmbed(
-              "📊 Security Status",
-              [
-                "Anti Spam: **ON**",
-                "Anti Invite: **ON**",
-                "Anti Badword: **ON**",
-                "Anti Caps: **ON**",
-                "Anti Mention Spam: **ON**",
-                "Anti Raid: **ON**",
-                "Mass Delete Protection: **ON**",
-                `Ping: **${client.ws.ping}ms**`,
-              ].join("\n"),
-              "Green"
-            ),
-          ],
-          ephemeral: true,
-        });
-      }
+  const args = content.slice(PREFIX.length).trim().split(/ +/).filter(Boolean);
+  const cmd = args.shift()?.toLowerCase() || "help";
 
-      if (id === "sqs_panel_lock") {
-        await interaction.channel.permissionOverwrites.edit(interaction.guild.roles.everyone, { SendMessages: false });
-        await sendLog(interaction.guild, "🔒 Channel Locked", `${interaction.channel} dikunci oleh ${interaction.user}`, "Orange");
-        return interaction.reply({ embeds: [modernEmbed("🔒 Channel Locked", "Channel ini berhasil dikunci.", "Orange")], ephemeral: true });
-      }
-
-      if (id === "sqs_panel_unlock") {
-        await interaction.channel.permissionOverwrites.edit(interaction.guild.roles.everyone, { SendMessages: null });
-        await sendLog(interaction.guild, "🔓 Channel Unlocked", `${interaction.channel} dibuka oleh ${interaction.user}`, "Green");
-        return interaction.reply({ embeds: [modernEmbed("🔓 Channel Unlocked", "Channel ini berhasil dibuka.", "Green")], ephemeral: true });
-      }
-
-      if (id === "sqs_panel_clear") {
-        await interaction.channel.bulkDelete(10, true).catch(() => {});
-        return interaction.reply({ embeds: [modernEmbed("🧹 Clear Complete", "10 pesan terakhir sudah dibersihkan.", "Green")], ephemeral: true });
-      }
-
-      if (id === "sqs_panel_lockdown") {
-        await interaction.deferReply({ ephemeral: true });
-        const count = await lockdownGuild(interaction.guild, interaction.user.tag);
-        return interaction.editReply({ embeds: [modernEmbed("🚨 Panic Lockdown", `Server berhasil dikunci.\nChannels affected: **${count}**`, "DarkRed")] });
-      }
-
-      if (id === "sqs_panel_unlockall") {
-        await interaction.deferReply({ ephemeral: true });
-        const count = await unlockGuild(interaction.guild, interaction.user.tag);
-        return interaction.editReply({ embeds: [modernEmbed("✅ Unlock All", `Server berhasil dibuka.\nChannels affected: **${count}**`, "Green")] });
-      }
-
-      if (id === "sqs_panel_refresh") {
-        return interaction.update({ embeds: [panelEmbed(interaction.guild)], components: panelRows() });
-      }
-    }
-
-    if (!interaction.isChatInputCommand()) return;
-    if (!(await replyAdminOnly(interaction))) return;
-
-    const { commandName } = interaction;
-
-    if (commandName === "panel") {
-      return interaction.reply({
-        embeds: [panelEmbed(interaction.guild)],
-        components: panelRows(),
-      });
-    }
-
-    if (commandName === "ping") {
-      return interaction.reply({ embeds: [modernEmbed("🏓 Pong", `Latency: **${client.ws.ping}ms**`, "Green")], ephemeral: true });
-    }
-
-    if (commandName === "status") {
-      return interaction.reply({
-        embeds: [
-          modernEmbed(
-            "🛡️ Security Status",
-            [
-              "Anti Spam: **ON**",
-              "Anti Invite: **ON**",
-              "Anti Badword: **ON**",
-              "Anti Caps Spam: **ON**",
-              "Anti Mention Spam: **ON**",
-              "Anti Raid: **ON**",
-              "Mass Delete Protection: **ON**",
-            ].join("\n"),
-            "Green"
-          ),
-        ],
-        ephemeral: true,
-      });
-    }
-
-    if (commandName === "clear") {
-      const amount = interaction.options.getInteger("amount");
-      await interaction.channel.bulkDelete(amount, true).catch(() => {});
-      return interaction.reply({ embeds: [modernEmbed("🧹 Messages Cleared", `Berhasil hapus **${amount}** pesan.`, "Green")], ephemeral: true });
-    }
-
-    if (commandName === "lock") {
-      await interaction.channel.permissionOverwrites.edit(interaction.guild.roles.everyone, { SendMessages: false });
-      await sendLog(interaction.guild, "🔒 Channel Locked", `${interaction.channel} dikunci oleh ${interaction.user}`, "Orange");
-      return interaction.reply({ embeds: [modernEmbed("🔒 Locked", "Channel ini dikunci.", "Orange")] });
-    }
-
-    if (commandName === "unlock") {
-      await interaction.channel.permissionOverwrites.edit(interaction.guild.roles.everyone, { SendMessages: null });
-      await sendLog(interaction.guild, "🔓 Channel Unlocked", `${interaction.channel} dibuka oleh ${interaction.user}`, "Green");
-      return interaction.reply({ embeds: [modernEmbed("🔓 Unlocked", "Channel ini dibuka.", "Green")] });
-    }
-
-    if (commandName === "lockdown") {
-      await interaction.deferReply();
-      const count = await lockdownGuild(interaction.guild, interaction.user.tag);
-      return interaction.editReply({ embeds: [modernEmbed("🚨 Lockdown", `Semua channel berhasil dikunci.\nChannels affected: **${count}**`, "DarkRed")] });
-    }
-
-    if (commandName === "unlockall") {
-      await interaction.deferReply();
-      const count = await unlockGuild(interaction.guild, interaction.user.tag);
-      return interaction.editReply({ embeds: [modernEmbed("✅ Unlock All", `Semua channel berhasil dibuka.\nChannels affected: **${count}**`, "Green")] });
-    }
-
-    if (commandName === "warn") {
-      const target = interaction.options.getMember("user");
-      const reason = interaction.options.getString("reason") || "Tidak ada alasan";
-
-      const key = `${interaction.guild.id}-${target.id}`;
-      if (!warnMap.has(key)) warnMap.set(key, []);
-      warnMap.get(key).push({ reason, mod: interaction.user.tag, time: new Date().toLocaleString("id-ID") });
-
-      await sendLog(interaction.guild, "⚠️ User Warned", `User: ${target}\nMod: ${interaction.user}\nReason: ${reason}`, "Orange");
-      return interaction.reply({ embeds: [modernEmbed("⚠️ Warn Added", `${target} diberi warning.\nReason: **${reason}**`, "Orange")] });
-    }
-
-    if (commandName === "warnings") {
-      const target = interaction.options.getMember("user");
-      const key = `${interaction.guild.id}-${target.id}`;
-      const warns = warnMap.get(key) || [];
-
-      if (!warns.length) {
-        return interaction.reply({ embeds: [modernEmbed("✅ Clean", `${target} tidak punya warning.`, "Green")], ephemeral: true });
-      }
-
-      const list = warns.map((w, i) => `**${i + 1}.** ${w.reason}\nMod: ${w.mod}\nTime: ${w.time}`).join("\n\n");
-      return interaction.reply({ embeds: [modernEmbed(`⚠️ Warnings: ${target.user.tag}`, list, "Orange")], ephemeral: true });
-    }
-
-    if (commandName === "clearwarn") {
-      const target = interaction.options.getMember("user");
-      const key = `${interaction.guild.id}-${target.id}`;
-      warnMap.delete(key);
-      return interaction.reply({ embeds: [modernEmbed("✅ Warnings Cleared", `Warning ${target} sudah dihapus.`, "Green")] });
-    }
-
-    if (commandName === "ban") {
-      const target = interaction.options.getMember("user");
-      const reason = interaction.options.getString("reason") || "Tidak ada alasan";
-
-      await target.ban({ reason }).catch(() => null);
-      await sendLog(interaction.guild, "🔨 User Banned", `User: ${target.user.tag}\nMod: ${interaction.user.tag}\nReason: ${reason}`, "Red");
-      return interaction.reply({ embeds: [modernEmbed("🔨 Banned", `${target.user.tag} diban.\nReason: ${reason}`, "Red")] });
-    }
-
-    if (commandName === "kick") {
-      const target = interaction.options.getMember("user");
-      const reason = interaction.options.getString("reason") || "Tidak ada alasan";
-
-      await target.kick(reason).catch(() => null);
-      await sendLog(interaction.guild, "👢 User Kicked", `User: ${target.user.tag}\nMod: ${interaction.user.tag}\nReason: ${reason}`, "Orange");
-      return interaction.reply({ embeds: [modernEmbed("👢 Kicked", `${target.user.tag} dikick.\nReason: ${reason}`, "Orange")] });
-    }
-
-    if (commandName === "timeout") {
-      const target = interaction.options.getMember("user");
-      const durationInput = interaction.options.getString("duration");
-      const reason = interaction.options.getString("reason") || "Tidak ada alasan";
-      const duration = parseDuration(durationInput);
-
-      if (!duration) {
-        return interaction.reply({ content: "Format durasi salah. Contoh: `10m`, `1h`, `1d`", ephemeral: true });
-      }
-
-      await target.timeout(duration, reason).catch(() => null);
-      await sendLog(interaction.guild, "⏳ User Timeout", `User: ${target}\nDurasi: ${durationInput}\nReason: ${reason}`, "Orange");
-      return interaction.reply({ embeds: [modernEmbed("⏳ Timeout", `${target} timeout **${durationInput}**.\nReason: ${reason}`, "Orange")] });
-    }
-
-    if (commandName === "untimeout") {
-      const target = interaction.options.getMember("user");
-      await target.timeout(null).catch(() => null);
-      await sendLog(interaction.guild, "✅ Timeout Removed", `User: ${target}\nMod: ${interaction.user}`, "Green");
-      return interaction.reply({ embeds: [modernEmbed("✅ Untimeout", `${target} sudah bebas timeout.`, "Green")] });
-    }
-  } catch (err) {
-    console.error("INTERACTION ERROR:", err);
-    if (interaction.deferred || interaction.replied) {
-      interaction.editReply({ content: "Terjadi error saat menjalankan command." }).catch(() => {});
-    } else {
-      interaction.reply({ content: "Terjadi error saat menjalankan command.", ephemeral: true }).catch(() => {});
-    }
-  }
+  return runAction(message, cmd, args);
 });
 
 // ================= ANTI RAID JOIN =================
@@ -502,7 +603,12 @@ client.on("guildMemberAdd", async (member) => {
 
   if (joins.length >= 5) {
     await member.timeout(30 * 60 * 1000, "Anti raid").catch(() => {});
-    await sendLog(member.guild, "🚨 Anti Raid", `Join cepat terdeteksi.\nMember baru ${member.user.tag} diberi timeout **30 menit**.`, "DarkRed");
+    await sendLog(
+      member.guild,
+      "🚨 Anti Raid Triggered",
+      `Join cepat terdeteksi.\nMember baru ${member.user.tag} diberi timeout **30 menit**.`,
+      "DarkRed"
+    );
   }
 });
 
@@ -513,6 +619,7 @@ async function handleDangerDelete(guild, type) {
   const auditType = type === "channel" ? AuditLogEvent.ChannelDelete : AuditLogEvent.RoleDelete;
   const logs = await guild.fetchAuditLogs({ type: auditType, limit: 1 }).catch(() => null);
   const entry = logs?.entries.first();
+
   if (!entry || !entry.executor) return;
 
   const executorId = entry.executor.id;
@@ -531,6 +638,7 @@ async function handleDangerDelete(guild, type) {
     await lockdownGuild(guild, "Anti Mass Delete");
 
     const member = await guild.members.fetch(executorId).catch(() => null);
+
     if (member && !canBypass(member)) {
       await member.ban({ reason: `Anti mass ${type} delete` }).catch(() => {});
     }
@@ -556,4 +664,6 @@ client.on("roleDelete", async (role) => {
   handleDangerDelete(role.guild, "role");
 });
 
-client.login(process.env.TOKEN);
+client.login(process.env.TOKEN).catch((err) => {
+  console.error("LOGIN ERROR:", err.message);
+});
