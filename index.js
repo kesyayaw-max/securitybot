@@ -117,7 +117,7 @@ function panelEmbed(guild) {
         inline: false,
       }
     )
-    .setFooter({ text: "SQS Premium Panel • Admin Only" })
+    .setFooter({ text: "SQS Panel • Admin Only" })
     .setTimestamp();
 }
 
