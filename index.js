@@ -30,8 +30,7 @@ const dangerMap = new Map();
 
 const BAD_WORDS = ["yatim"];
 
-const OWNER_IDS = process.env.OWNER_IDS?.split(",").map((id) => id.trim()).filter(Boolean) || [];
-let SECURITY_ENABLED = process.env.SECURITY_ENABLED !== "false";
+const OWNER_IDS = process.env.OWNER_IDS?.split(",") || [];
 
 function isAdmin(member) {
   return (
@@ -59,14 +58,12 @@ function modernEmbed(title, desc, color = "Blurple") {
     })
     .setTitle(title)
     .setDescription(desc || "Tidak ada deskripsi.")
-    .setFooter({ text: "Security System • SQS" })
+    .setFooter({ text: "Security System • SQS Premium" })
     .setTimestamp();
 }
 
 function statusDescription() {
   return [
-    `🛡️ Security Engine: **${SECURITY_ENABLED ? "ONLINE" : "OFFLINE"}**`,
-    "",
     "✅ Anti Spam: **ON**",
     "✅ Anti Invite: **ON**",
     "✅ Anti Badword: **ON**",
@@ -74,50 +71,38 @@ function statusDescription() {
     "✅ Anti Mention Spam: **ON**",
     "✅ Anti Raid: **ON**",
     "✅ Mass Delete Protection: **ON**",
-    "✅ Premium Panel UI: **ON**",
     "",
-    "Mode: **STEAK QURBAN!**",
+    "Mode: **Premium Protection**",
   ].join("\n");
 }
 
 function panelEmbed(guild) {
   return new EmbedBuilder()
-    .setColor(SECURITY_ENABLED ? "Blurple" : "DarkButNotBlack")
+    .setColor("Blurple")
     .setAuthor({
       name: "SteakQurban Security",
       iconURL: client.user?.displayAvatarURL(),
     })
-    .setTitle("🛡️ SQS Premium Security Panel")
-    .setDescription(
-      [
-        "```ansi",
-        `\u001b[1;36mSYSTEM\u001b[0m   : Steak Qurban Security`,
-        `\u001b[1;35mMODE\u001b[0m     : Steak Qurban Protection`,
-        `\u001b[1;32mSTATUS\u001b[0m   : ${SECURITY_ENABLED ? "ONLINE" : "OFFLINE"}`,
-        "```",
-        "Gunakan tombol di bawah untuk mengontrol keamanan server secara cepat.",
-      ].join("\n")
-    )
+    .setTitle("🛡️ Premium Security Control Panel")
+    .setDescription("Dashboard keamanan modern untuk kontrol cepat server.")
     .addFields(
       {
-        name: "🛡️ Protection",
-        value:
-          "✅ Anti Spam\n✅ Anti Invite\n✅ Anti Badword\n✅ Anti Mention\n✅ Anti Caps\n✅ Anti Raid",
+        name: "Protection",
+        value: "✅ Anti Spam\n✅ Anti Invite\n✅ Anti Badword\n✅ Anti Mention\n✅ Anti Caps\n✅ Anti Raid",
         inline: true,
       },
       {
-        name: "⚔️ Moderation",
-        value:
-          "✅ Lock / Unlock\n✅ Lockdown\n✅ Clear Messages\n✅ Timeout\n✅ Ban / Kick\n✅ Warn System",
+        name: "Moderation",
+        value: "✅ Lock / Unlock\n✅ Lockdown\n✅ Clear Messages\n✅ Timeout\n✅ Ban / Kick\n✅ Warn System",
         inline: true,
       },
       {
-        name: "📊 Server",
-        value: `**${guild.name}**\nMembers: **${guild.memberCount ?? "Unknown"}**\nPing: **${client.ws.ping}ms**`,
+        name: "Server",
+        value: `**${guild.name}**\nMembers: **${guild.memberCount ?? "Unknown"}**`,
         inline: false,
       }
     )
-    .setFooter({ text: "SQS Panel • Admin Only" })
+    .setFooter({ text: "SQS Premium Panel • Admin Only" })
     .setTimestamp();
 }
 
@@ -157,50 +142,89 @@ function panelRows() {
       .setEmoji("✅")
       .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
-      .setCustomId("sqs_panel_toggle")
-      .setLabel(SECURITY_ENABLED ? "Security ON" : "Security OFF")
-      .setEmoji("🛡️")
-      .setStyle(SECURITY_ENABLED ? ButtonStyle.Success : ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId("sqs_panel_refresh")
-      .setLabel("Refresh")
-      .setEmoji("🔄")
-      .setStyle(ButtonStyle.Primary)
-  );
-
-  const row3 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
       .setCustomId("sqs_panel_help")
       .setLabel("Help")
       .setEmoji("📘")
       .setStyle(ButtonStyle.Primary)
   );
 
-  return [row1, row2, row3];
+  return [row1, row2];
 }
 
-function premiumLogEmbed(guild, title, desc, color = "Red") {
-  return new EmbedBuilder()
+function cutText(value, max = 1024) {
+  const text = String(value ?? "Tidak ada");
+  return text.length > max ? `${text.slice(0, max - 3)}...` : text;
+}
+
+async function sendLog(guild, title, desc, color = "Red", data = {}) {
+  const ch = guild.channels.cache.get(process.env.LOG_CHANNEL_ID);
+  if (!ch) return;
+
+  const embed = new EmbedBuilder()
     .setColor(color)
     .setAuthor({
-      name: "SQS Security Log",
+      name: "SteakQurban Security Logs",
       iconURL: client.user?.displayAvatarURL(),
     })
     .setTitle(title)
-    .setDescription(desc || "Tidak ada detail.")
+    .setDescription(cutText(desc, 2048))
     .addFields(
-      { name: "🏠 Server", value: guild?.name || "Unknown", inline: true },
-      { name: "🆔 Guild ID", value: guild?.id || "Unknown", inline: true },
-      { name: "⚙️ Security", value: SECURITY_ENABLED ? "ONLINE" : "OFFLINE", inline: true }
+      {
+        name: "Executor",
+        value: data.executor || "Unknown / System",
+        inline: true,
+      },
+      {
+        name: "Target",
+        value: data.target || "N/A",
+        inline: true,
+      },
+      {
+        name: "Action",
+        value: data.action || title,
+        inline: true,
+      },
+      {
+        name: "Channel",
+        value: data.channel || "N/A",
+        inline: true,
+      },
+      {
+        name: "Reason",
+        value: cutText(data.reason || "Tidak ada", 1024),
+        inline: false,
+      },
+      {
+        name: "Server",
+        value: `${guild.name} (${guild.id})`,
+        inline: false,
+      }
     )
-    .setFooter({ text: "SQS Logging • Audit Trail" })
+    .setFooter({ text: "SQS Premium Logging • Audit Trail" })
     .setTimestamp();
+
+  await ch.send({ embeds: [embed] }).catch(() => {});
 }
 
-async function sendLog(guild, title, desc, color = "Red") {
-  const ch = guild.channels.cache.get(process.env.LOG_CHANNEL_ID);
-  if (!ch) return;
-  await ch.send({ embeds: [premiumLogEmbed(guild, title, desc, color)] }).catch(() => {});
+async function premiumLog(guild, payload = {}) {
+  return sendLog(
+    guild,
+    payload.title || "📊 Security Log",
+    payload.description || "Aktivitas tercatat oleh sistem keamanan.",
+    payload.color || "Blurple",
+    {
+      executor: payload.executor,
+      target: payload.target,
+      action: payload.action,
+      channel: payload.channel,
+      reason: payload.reason,
+    }
+  );
+}
+
+async function fetchLatestAudit(guild, type) {
+  const logs = await guild.fetchAuditLogs({ type, limit: 1 }).catch(() => null);
+  return logs?.entries.first() || null;
 }
 
 function parseDuration(input) {
@@ -262,10 +286,10 @@ async function unlockGuild(guild, executorTag = "System") {
 
 function helpEmbed() {
   return modernEmbed(
-    "🛡️ SQS Commands",
+    "🛡️ SQS Premium Commands",
     [
       "**Prefix Commands**",
-      "`sqs panel`, `sqs help`, `sqs ping`, `sqs status`, `sqs toggle`",
+      "`sqs panel`, `sqs help`, `sqs ping`, `sqs status`",
       "`sqs clear 10`, `sqs lock`, `sqs unlock`",
       "`sqs lockdown`, `sqs unlockall`",
       "`sqs warn @user alasan`, `sqs warnings @user`, `sqs clearwarn @user`",
@@ -495,34 +519,11 @@ async function runAction(ctx, cmd, args = []) {
     return reply({ embeds: [modernEmbed("✅ Untimeout", `${target} sudah bebas timeout.`, "Green")] });
   }
 
-  if (cmd === "toggle") {
-    SECURITY_ENABLED = !SECURITY_ENABLED;
-    await sendLog(
-      guild,
-      "🛡️ Security Toggle",
-      `Executor: ${user}\nNew Status: **${SECURITY_ENABLED ? "ONLINE" : "OFFLINE"}**`,
-      SECURITY_ENABLED ? "Green" : "Orange"
-    );
-    return reply({
-      embeds: [modernEmbed("🛡️ Security Toggle", `Security sekarang: **${SECURITY_ENABLED ? "ONLINE" : "OFFLINE"}**`, SECURITY_ENABLED ? "Green" : "Orange")],
-    });
-  }
-
   return reply({ embeds: [modernEmbed("❔ Unknown Command", "Gunakan `sqs help` atau `/panel`.", "Orange")] });
 }
 
 client.once("clientReady", () => {
   console.log(`Security Bot aktif: ${client.user.tag}`);
-
-  client.user.setPresence({
-    activities: [
-      {
-        name: "Steak Qurban System 🛡️",
-        type: 3, // Watching
-      },
-    ],
-    status: "dnd",
-  });
 });
 
 // ================= SLASH + BUTTON HANDLER =================
@@ -586,27 +587,6 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
     }
-
-    if (id === "sqs_panel_toggle") {
-      SECURITY_ENABLED = !SECURITY_ENABLED;
-      await sendLog(
-        interaction.guild,
-        "🛡️ Security Toggle",
-        `Executor: ${interaction.user}\nNew Status: **${SECURITY_ENABLED ? "ONLINE" : "OFFLINE"}**`,
-        SECURITY_ENABLED ? "Green" : "Orange"
-      );
-      return interaction.update({
-        embeds: [panelEmbed(interaction.guild)],
-        components: panelRows(),
-      });
-    }
-
-    if (id === "sqs_panel_refresh") {
-      return interaction.update({
-        embeds: [panelEmbed(interaction.guild)],
-        components: panelRows(),
-      });
-    }
   } catch (err) {
     console.error("INTERACTION ERROR:", err);
     const payload = {
@@ -625,8 +605,6 @@ client.on("messageCreate", async (message) => {
 
   const member = message.member;
   const content = message.content;
-
-  if (!SECURITY_ENABLED && !content.toLowerCase().startsWith(PREFIX)) return;
 
   const inviteRegex = /(discord\.gg|discord\.com\/invite|discordapp\.com\/invite)/i;
 
@@ -759,6 +737,258 @@ client.on("channelDelete", async (channel) => {
 client.on("roleDelete", async (role) => {
   if (!role.guild) return;
   handleDangerDelete(role.guild, "role");
+});
+
+// ================= PREMIUM PANEL UI =================
+let SECURITY_ENABLED = true;
+
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isButton()) return;
+
+  if (
+    !interaction.member.permissions.has(PermissionsBitField.Flags.Administrator) &&
+    !process.env.OWNER_IDS?.split(",").includes(interaction.member.id)
+  ) {
+    return interaction.reply({ content: "❌ Admin only", ephemeral: true });
+  }
+
+  if (interaction.customId === "toggle_security") {
+    SECURITY_ENABLED = !SECURITY_ENABLED;
+
+    return interaction.update({
+      embeds: [
+        modernEmbed(
+          "🛡️ Security Panel",
+          `Status: **${SECURITY_ENABLED ? "ON" : "OFF"}**`
+        ),
+      ],
+    });
+  }
+});
+
+// COMMAND PANEL
+client.on("messageCreate", async (message) => {
+  if (!message.content.startsWith(PREFIX)) return;
+
+  const args = message.content.slice(PREFIX.length).trim().split(/ +/);
+  const cmd = args.shift()?.toLowerCase();
+
+  if (cmd === "panel") {
+    if (!isAdmin(message.member)) {
+      return message.reply("❌ Admin only");
+    }
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("toggle_security")
+        .setLabel("Toggle Security")
+        .setStyle(ButtonStyle.Primary)
+    );
+
+    return message.reply({
+      embeds: [
+        modernEmbed(
+          "🛡️ SQS Premium Panel",
+          `Security Status: **${SECURITY_ENABLED ? "ON" : "OFF"}**`
+        ),
+      ],
+      components: [row],
+    });
+  }
+});
+
+
+
+// ================= PREMIUM LOGGING EVENTS =================
+client.on("messageDelete", async (message) => {
+  if (!message.guild || message.author?.bot) return;
+
+  await premiumLog(message.guild, {
+    title: "🗑️ Message Deleted",
+    description: `Pesan dari ${message.author || "Unknown"} dihapus.`,
+    color: "Orange",
+    executor: "Unknown / Auto / Moderator",
+    target: message.author ? `${message.author.tag} (${message.author.id})` : "Unknown",
+    action: "Message Delete",
+    channel: `${message.channel} (${message.channel.id})`,
+    reason: cutText(message.content || "Pesan kosong / embed / attachment", 1024),
+  });
+});
+
+client.on("messageUpdate", async (oldMessage, newMessage) => {
+  if (!newMessage.guild || newMessage.author?.bot) return;
+  if (oldMessage.content === newMessage.content) return;
+
+  await premiumLog(newMessage.guild, {
+    title: "✏️ Message Edited",
+    description: `Pesan dari ${newMessage.author} diedit.`,
+    color: "Yellow",
+    executor: `${newMessage.author.tag} (${newMessage.author.id})`,
+    target: `${newMessage.author.tag} (${newMessage.author.id})`,
+    action: "Message Edit",
+    channel: `${newMessage.channel} (${newMessage.channel.id})`,
+    reason: `Before: ${cutText(oldMessage.content || "Unknown", 450)}\nAfter: ${cutText(newMessage.content || "Unknown", 450)}`,
+  });
+});
+
+client.on("guildMemberAdd", async (member) => {
+  await premiumLog(member.guild, {
+    title: "📥 Member Joined",
+    description: `${member.user} bergabung ke server.`,
+    color: "Green",
+    executor: "System",
+    target: `${member.user.tag} (${member.id})`,
+    action: "Member Join",
+    reason: `Account created: <t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`,
+  });
+});
+
+client.on("guildMemberRemove", async (member) => {
+  await premiumLog(member.guild, {
+    title: "📤 Member Left",
+    description: `${member.user?.tag || member.id} keluar dari server.`,
+    color: "Grey",
+    executor: "System / Unknown",
+    target: `${member.user?.tag || "Unknown"} (${member.id})`,
+    action: "Member Leave",
+  });
+});
+
+client.on("channelCreate", async (channel) => {
+  const entry = await fetchLatestAudit(channel.guild, AuditLogEvent.ChannelCreate);
+  await premiumLog(channel.guild, {
+    title: "📁 Channel Created",
+    description: `Channel baru dibuat: ${channel}`,
+    color: "Green",
+    executor: entry?.executor ? `${entry.executor.tag} (${entry.executor.id})` : "Unknown",
+    target: `${channel.name} (${channel.id})`,
+    action: "Channel Create",
+    channel: `${channel.name} (${channel.id})`,
+    reason: entry?.reason || "Tidak ada",
+  });
+});
+
+client.on("channelDelete", async (channel) => {
+  const entry = await fetchLatestAudit(channel.guild, AuditLogEvent.ChannelDelete);
+  await premiumLog(channel.guild, {
+    title: "🧨 Channel Deleted",
+    description: `Channel dihapus: **${channel.name}**`,
+    color: "Red",
+    executor: entry?.executor ? `${entry.executor.tag} (${entry.executor.id})` : "Unknown",
+    target: `${channel.name} (${channel.id})`,
+    action: "Channel Delete",
+    channel: `${channel.name} (${channel.id})`,
+    reason: entry?.reason || "Tidak ada",
+  });
+});
+
+client.on("channelUpdate", async (oldChannel, newChannel) => {
+  if (!newChannel.guild) return;
+  const changes = [];
+  if (oldChannel.name !== newChannel.name) changes.push(`Name: ${oldChannel.name} → ${newChannel.name}`);
+  if (oldChannel.topic !== newChannel.topic) changes.push("Topic changed");
+  if (!changes.length) return;
+
+  const entry = await fetchLatestAudit(newChannel.guild, AuditLogEvent.ChannelUpdate);
+  await premiumLog(newChannel.guild, {
+    title: "🛠️ Channel Updated",
+    description: changes.join("\n"),
+    color: "Yellow",
+    executor: entry?.executor ? `${entry.executor.tag} (${entry.executor.id})` : "Unknown",
+    target: `${newChannel.name} (${newChannel.id})`,
+    action: "Channel Update",
+    channel: `${newChannel} (${newChannel.id})`,
+    reason: entry?.reason || "Tidak ada",
+  });
+});
+
+client.on("roleCreate", async (role) => {
+  const entry = await fetchLatestAudit(role.guild, AuditLogEvent.RoleCreate);
+  await premiumLog(role.guild, {
+    title: "🎭 Role Created",
+    description: `Role baru dibuat: **${role.name}**`,
+    color: "Green",
+    executor: entry?.executor ? `${entry.executor.tag} (${entry.executor.id})` : "Unknown",
+    target: `${role.name} (${role.id})`,
+    action: "Role Create",
+    reason: entry?.reason || "Tidak ada",
+  });
+});
+
+client.on("roleDelete", async (role) => {
+  const entry = await fetchLatestAudit(role.guild, AuditLogEvent.RoleDelete);
+  await premiumLog(role.guild, {
+    title: "🧨 Role Deleted",
+    description: `Role dihapus: **${role.name}**`,
+    color: "Red",
+    executor: entry?.executor ? `${entry.executor.tag} (${entry.executor.id})` : "Unknown",
+    target: `${role.name} (${role.id})`,
+    action: "Role Delete",
+    reason: entry?.reason || "Tidak ada",
+  });
+});
+
+client.on("roleUpdate", async (oldRole, newRole) => {
+  const changes = [];
+  if (oldRole.name !== newRole.name) changes.push(`Name: ${oldRole.name} → ${newRole.name}`);
+  if (oldRole.permissions.bitfield !== newRole.permissions.bitfield) {
+    changes.push("Permissions changed");
+    if (!oldRole.permissions.has(PermissionsBitField.Flags.Administrator) && newRole.permissions.has(PermissionsBitField.Flags.Administrator)) {
+      changes.push("⚠️ Administrator permission added");
+    }
+  }
+  if (!changes.length) return;
+
+  const entry = await fetchLatestAudit(newRole.guild, AuditLogEvent.RoleUpdate);
+  await premiumLog(newRole.guild, {
+    title: "🎭 Role Updated",
+    description: changes.join("\n"),
+    color: newRole.permissions.has(PermissionsBitField.Flags.Administrator) ? "Red" : "Yellow",
+    executor: entry?.executor ? `${entry.executor.tag} (${entry.executor.id})` : "Unknown",
+    target: `${newRole.name} (${newRole.id})`,
+    action: "Role Update",
+    reason: entry?.reason || "Tidak ada",
+  });
+});
+
+client.on("guildBanAdd", async (ban) => {
+  const entry = await fetchLatestAudit(ban.guild, AuditLogEvent.MemberBanAdd);
+  await premiumLog(ban.guild, {
+    title: "🔨 Member Banned",
+    description: `${ban.user.tag} diban dari server.`,
+    color: "Red",
+    executor: entry?.executor ? `${entry.executor.tag} (${entry.executor.id})` : "Unknown",
+    target: `${ban.user.tag} (${ban.user.id})`,
+    action: "Member Ban",
+    reason: entry?.reason || "Tidak ada",
+  });
+});
+
+client.on("guildBanRemove", async (ban) => {
+  const entry = await fetchLatestAudit(ban.guild, AuditLogEvent.MemberBanRemove);
+  await premiumLog(ban.guild, {
+    title: "✅ Member Unbanned",
+    description: `${ban.user.tag} di-unban dari server.`,
+    color: "Green",
+    executor: entry?.executor ? `${entry.executor.tag} (${entry.executor.id})` : "Unknown",
+    target: `${ban.user.tag} (${ban.user.id})`,
+    action: "Member Unban",
+    reason: entry?.reason || "Tidak ada",
+  });
+});
+
+client.on("webhooksUpdate", async (channel) => {
+  const entry = await fetchLatestAudit(channel.guild, AuditLogEvent.WebhookCreate);
+  await premiumLog(channel.guild, {
+    title: "🪝 Webhook Activity",
+    description: `Webhook berubah di ${channel}`,
+    color: "Orange",
+    executor: entry?.executor ? `${entry.executor.tag} (${entry.executor.id})` : "Unknown",
+    target: `${channel.name} (${channel.id})`,
+    action: "Webhook Update/Create/Delete",
+    channel: `${channel} (${channel.id})`,
+    reason: entry?.reason || "Tidak ada",
+  });
 });
 
 client.login(process.env.TOKEN).catch((err) => {
