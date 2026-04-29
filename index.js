@@ -524,6 +524,15 @@ async function runAction(ctx, cmd, args = []) {
 
 client.once("clientReady", () => {
   console.log(`Security Bot aktif: ${client.user.tag}`);
+  client.user.setPresence({
+  activities: [
+    {
+      name: "Anti Nuke Protection 🛡️",
+      type: 3,
+    },
+  ],
+  status: "dnd",
+});
 });
 
 // ================= SLASH + BUTTON HANDLER =================
