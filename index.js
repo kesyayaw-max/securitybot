@@ -28,7 +28,7 @@ const joinMap = new Map();
 const warnMap = new Map();
 const dangerMap = new Map();
 
-const BAD_WORDS = ["yatim"];
+const BAD_WORDS = ["yatim",];
 
 const OWNER_IDS = process.env.OWNER_IDS?.split(",") || [];
 
@@ -633,7 +633,7 @@ client.on("messageCreate", async (message) => {
   }
 
   const mentionCount = message.mentions.users.size + message.mentions.roles.size;
-  if (mentionCount >= 5 && !canBypass(member)) {
+  if (mentionCount >= 15 && !canBypass(member)) {
     await message.delete().catch(() => {});
     await member.timeout(10 * 60 * 1000, "Mention spam").catch(() => {});
     await sendLog(message.guild, "📢 Anti Mention Spam", `User: ${message.author}\nMention: **${mentionCount}**\nAction: **Timeout 10 menit**`, "Red");
@@ -659,7 +659,7 @@ client.on("messageCreate", async (message) => {
   timestamps.push(now);
   spamMap.set(id, timestamps);
 
-  if (timestamps.length >= 5 && !canBypass(member)) {
+  if (timestamps.length >= 15 && !canBypass(member)) {
     await member.timeout(10 * 60 * 1000, "Spam").catch(() => {});
     spamMap.set(id, []);
     await sendLog(message.guild, "⚡ Anti Spam Triggered", `User: ${message.author}\nAction: **Timeout 10 menit**`, "Red");
@@ -685,7 +685,7 @@ client.on("guildMemberAdd", async (member) => {
   joins.push(now);
   joinMap.set(guildId, joins);
 
-  if (joins.length >= 5) {
+  if (joins.length >= 15) {
     await member.timeout(30 * 60 * 1000, "Anti raid").catch(() => {});
     await sendLog(
       member.guild,
@@ -718,7 +718,7 @@ async function handleDangerDelete(guild, type) {
   actions.push(now);
   dangerMap.set(key, actions);
 
-  if (actions.length >= 3) {
+  if (actions.length >= 7) {
     await lockdownGuild(guild, "Anti Mass Delete");
 
     const member = await guild.members.fetch(executorId).catch(() => null);
