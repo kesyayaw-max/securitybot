@@ -1,8 +1,5 @@
 require("dotenv").config();
-const OWNER_IDS = process.env.OWNER_IDS
-  ?.split(",")
-  .map(id => id.trim());
-  
+
 const {
   Client,
   GatewayIntentBits,
