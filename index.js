@@ -526,7 +526,6 @@ client.on("roleDelete", async (role) => {
 });
 
 (async () => {
-  await connectMongo();
   await client.login(process.env.TOKEN);
 
   startDashboard(); // 🔥 WAJIB TAMBAH INI
