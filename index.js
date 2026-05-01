@@ -525,7 +525,12 @@ client.on("roleDelete", async (role) => {
   handleDangerDelete(role.guild, "role");
 });
 
-client.login(process.env.TOKEN);
+(async () => {
+  await connectMongo();
+  await client.login(process.env.TOKEN);
+
+  startDashboard(); // 🔥 WAJIB TAMBAH INI
+})();
 
 // ================= WEB DASHBOARD + ADMIN LOGIN =================
 const app = express();
