@@ -20,6 +20,10 @@ const client = new Client({
 
 const PREFIX = "sqs";
 
+const OWNER_IDS = process.env.OWNER_IDS
+  ? process.env.OWNER_IDS.split(",").map(id => id.trim()).filter(Boolean)
+  : [];
+
 const spamMap = new Map();
 const joinMap = new Map();
 const warnMap = new Map();
@@ -30,7 +34,12 @@ const BAD_WORDS = [
 ];
 
 function isAdmin(member) {
-  return member.permissions.has(PermissionsBitField.Flags.Administrator);
+  if (!member) return false;
+
+  return (
+    OWNER_IDS.includes(member.id) ||
+    member.permissions.has(PermissionsBitField.Flags.Administrator)
+  );
 }
 
 function isWhitelisted(member) {
