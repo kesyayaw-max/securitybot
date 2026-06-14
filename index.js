@@ -17,7 +17,7 @@ const express = require("express");
 const session = require("express-session");
 const path = require("path");
 
-const PREFIX = "sqs";
+const PREFIX = "ccs";
 
 const client = new Client({
   intents: [
@@ -209,7 +209,7 @@ function modernEmbed(title, desc, color = "Blurple") {
     })
     .setTitle(title)
     .setDescription(desc || "Tidak ada deskripsi.")
-    .setFooter({ text: "Security System • SQS Public" })
+    .setFooter({ text: "Security System • Cosmic Corner Public" })
     .setTimestamp();
 }
 
@@ -268,7 +268,7 @@ async function sendLog(guild, title, desc, color = "Red", data = {}) {
       { name: "Reason", value: cutText(data.reason || "Tidak ada", 1024), inline: false },
       { name: "Server", value: `${guild.name} (${guild.id})`, inline: false }
     )
-    .setFooter({ text: "SQS Premium Logging • Audit Trail" })
+    .setFooter({ text: "Cosmic Corner Logging • Audit Trail" })
     .setTimestamp();
 
   await ch.send({ embeds: [embed] }).catch(() => {});
@@ -281,17 +281,17 @@ async function fetchLatestAudit(guild, type) {
 
 function panelRows() {
   const row1 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId("sqs_panel_status").setLabel("Status").setEmoji("📊").setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId("sqs_panel_config").setLabel("Config").setEmoji("⚙️").setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId("sqs_panel_toggle").setLabel("Security ON/OFF").setEmoji("🛡️").setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId("sqs_panel_clear10").setLabel("Clear 10").setEmoji("🧹").setStyle(ButtonStyle.Secondary)
+    new ButtonBuilder().setCustomId("ccs_panel_status").setLabel("Status").setEmoji("📊").setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId("ccs_panel_config").setLabel("Config").setEmoji("⚙️").setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId("ccs_panel_toggle").setLabel("Security ON/OFF").setEmoji("🛡️").setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId("ccs_panel_clear10").setLabel("Clear 10").setEmoji("🧹").setStyle(ButtonStyle.Secondary)
   );
 
   const row2 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId("sqs_panel_lock").setLabel("Lock").setEmoji("🔒").setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId("sqs_panel_unlock").setLabel("Unlock").setEmoji("🔓").setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId("sqs_panel_lockdown").setLabel("Panic Lockdown").setEmoji("🚨").setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId("sqs_panel_unlockall").setLabel("Unlock All").setEmoji("✅").setStyle(ButtonStyle.Success)
+    new ButtonBuilder().setCustomId("ccs_panel_lock").setLabel("Lock").setEmoji("🔒").setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId("ccs_panel_unlock").setLabel("Unlock").setEmoji("🔓").setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId("ccs_panel_lockdown").setLabel("Panic Lockdown").setEmoji("🚨").setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId("ccs_panel_unlockall").setLabel("Unlock All").setEmoji("✅").setStyle(ButtonStyle.Success)
   );
 
   return [row1, row2];
@@ -334,34 +334,34 @@ async function panelEmbed(guild) {
         inline: false,
       }
     )
-    .setFooter({ text: "SQS Public Panel • Admin Only" })
+    .setFooter({ text: "CCS Public Panel • Admin Only" })
     .setTimestamp();
 }
 
 function helpEmbed() {
   return modernEmbed(
-    "🛡️ SQS Public Commands",
+    "🛡️ CCS Public Commands",
     [
       "**Prefix Commands**",
-      "`sqs setup` — auto setup config server",
-      "`sqs panel` — panel utama",
-      "`sqs config show`",
-      "`sqs config spam 10`",
-      "`sqs config spamtime 8`",
-      "`sqs config mention 5`",
-      "`sqs config caps 70`",
-      "`sqs config timeout 10m`",
-      "`sqs config security on/off`",
-      "`sqs config log #channel`",
-      "`sqs config whitelist @role`",
-      "`sqs config reset`",
+      "`ccs setup` — auto setup config server",
+      "`ccs panel` — panel utama",
+      "`ccs config show`",
+      "`ccs config spam 10`",
+      "`ccs config spamtime 8`",
+      "`ccs config mention 5`",
+      "`ccs config caps 70`",
+      "`ccs config timeout 10m`",
+      "`ccs config security on/off`",
+      "`ccs config log #channel`",
+      "`ccs config whitelist @role`",
+      "`ccs config reset`",
       "",
       "**Moderation**",
-      "`sqs clear 10`, `sqs lock`, `sqs unlock`",
-      "`sqs lockdown`, `sqs unlockall`",
-      "`sqs warn @user alasan`, `sqs warnings @user`, `sqs clearwarn @user`",
-      "`sqs ban @user alasan`, `sqs kick @user alasan`",
-      "`sqs timeout @user 10m alasan`, `sqs untimeout @user`",
+      "`ccs clear 10`, `ccs lock`, `ccs unlock`",
+      "`ccs lockdown`, `ccs unlockall`",
+      "`ccs warn @user alasan`, `ccs warnings @user`, `ccs clearwarn @user`",
+      "`ccs ban @user alasan`, `ccs kick @user alasan`",
+      "`ccs timeout @user 10m alasan`, `ccs untimeout @user`",
     ].join("\n"),
     "Blurple"
   );
@@ -517,20 +517,20 @@ async function handleConfig(ctx, args = []) {
 
   if (action === "log") {
     const channel = isInteraction ? ctx.options.getChannel("channel") : ctx.mentions.channels.first();
-    if (!channel) return reply({ content: "Mention channel log. Contoh: sqs config log #security-log", flags: MessageFlags.Ephemeral });
+    if (!channel) return reply({ content: "Mention channel log. Contoh: ccs config log #security-log", flags: MessageFlags.Ephemeral });
     patch.logChannelId = channel.id;
     label = `Log channel diset ke ${channel}`;
   }
 
   if (action === "whitelist") {
     const role = isInteraction ? ctx.options.getRole("role") : ctx.mentions.roles.first();
-    if (!role) return reply({ content: "Mention role whitelist. Contoh: sqs config whitelist @Trusted", flags: MessageFlags.Ephemeral });
+    if (!role) return reply({ content: "Mention role whitelist. Contoh: ccs config whitelist @Trusted", flags: MessageFlags.Ephemeral });
     patch.whitelistRoleId = role.id;
     label = `Whitelist role diset ke ${role}`;
   }
 
   if (!Object.keys(patch).length) {
-    return reply({ embeds: [modernEmbed("❔ Config Unknown", "Gunakan `sqs config show`.", "Orange")] });
+    return reply({ embeds: [modernEmbed("❔ Config Unknown", "Gunakan `ccs config show`.", "Orange")] });
   }
 
   const saved = await updateConfig(guild, patch);
@@ -595,7 +595,7 @@ async function runAction(ctx, cmd, args = []) {
   if (cmd === "clear") {
     const amount = isInteraction ? ctx.options.getInteger("amount") : parseInt(args[0], 10);
     if (!amount || amount < 1 || amount > 100) {
-      return reply({ content: "Gunakan: `sqs clear 10` atau `/clear amount:10`", flags: MessageFlags.Ephemeral });
+      return reply({ content: "Gunakan: `ccs clear 10` atau `/clear amount:10`", flags: MessageFlags.Ephemeral });
     }
 
     await channel.bulkDelete(amount, true).catch(() => {});
@@ -642,7 +642,7 @@ async function runAction(ctx, cmd, args = []) {
   if (cmd === "warn") {
     const target = isInteraction ? ctx.options.getMember("user") : ctx.mentions.members.first();
     const reason = isInteraction ? (ctx.options.getString("reason") || "Tidak ada alasan") : (args.slice(1).join(" ") || "Tidak ada alasan");
-    if (!target) return reply({ content: "Gunakan: `sqs warn @user alasan`", flags: MessageFlags.Ephemeral });
+    if (!target) return reply({ content: "Gunakan: `ccs warn @user alasan`", flags: MessageFlags.Ephemeral });
 
     if (mongoose.connection.readyState === 1) {
       await UserWarn.create({
@@ -670,7 +670,7 @@ async function runAction(ctx, cmd, args = []) {
 
   if (cmd === "warnings") {
     const target = isInteraction ? ctx.options.getMember("user") : ctx.mentions.members.first();
-    if (!target) return reply({ content: "Gunakan: `sqs warnings @user`", flags: MessageFlags.Ephemeral });
+    if (!target) return reply({ content: "Gunakan: `ccs warnings @user`", flags: MessageFlags.Ephemeral });
 
     let warns = [];
     if (mongoose.connection.readyState === 1) {
@@ -690,7 +690,7 @@ async function runAction(ctx, cmd, args = []) {
 
   if (cmd === "clearwarn") {
     const target = isInteraction ? ctx.options.getMember("user") : ctx.mentions.members.first();
-    if (!target) return reply({ content: "Gunakan: `sqs clearwarn @user`", flags: MessageFlags.Ephemeral });
+    if (!target) return reply({ content: "Gunakan: `ccs clearwarn @user`", flags: MessageFlags.Ephemeral });
 
     if (mongoose.connection.readyState === 1) {
       await UserWarn.deleteMany({ guildId: guild.id, userId: target.id });
@@ -704,7 +704,7 @@ async function runAction(ctx, cmd, args = []) {
   if (cmd === "ban") {
     const target = isInteraction ? ctx.options.getMember("user") : ctx.mentions.members.first();
     const reason = isInteraction ? (ctx.options.getString("reason") || "Tidak ada alasan") : (args.slice(1).join(" ") || "Tidak ada alasan");
-    if (!target) return reply({ content: "Gunakan: `sqs ban @user alasan`", flags: MessageFlags.Ephemeral });
+    if (!target) return reply({ content: "Gunakan: `ccs ban @user alasan`", flags: MessageFlags.Ephemeral });
 
     await target.ban({ reason }).catch(() => null);
     await sendLog(guild, "🔨 User Banned", `User: ${target.user.tag}\nMod: ${user.tag}\nReason: ${reason}`, "Red", {
@@ -720,7 +720,7 @@ async function runAction(ctx, cmd, args = []) {
   if (cmd === "kick") {
     const target = isInteraction ? ctx.options.getMember("user") : ctx.mentions.members.first();
     const reason = isInteraction ? (ctx.options.getString("reason") || "Tidak ada alasan") : (args.slice(1).join(" ") || "Tidak ada alasan");
-    if (!target) return reply({ content: "Gunakan: `sqs kick @user alasan`", flags: MessageFlags.Ephemeral });
+    if (!target) return reply({ content: "Gunakan: `ccs kick @user alasan`", flags: MessageFlags.Ephemeral });
 
     await target.kick(reason).catch(() => null);
     await sendLog(guild, "👢 User Kicked", `User: ${target.user.tag}\nMod: ${user.tag}\nReason: ${reason}`, "Orange", {
@@ -739,7 +739,7 @@ async function runAction(ctx, cmd, args = []) {
     const reason = isInteraction ? (ctx.options.getString("reason") || "Tidak ada alasan") : (args.slice(2).join(" ") || "Tidak ada alasan");
     const duration = parseDuration(durationInput);
 
-    if (!target || !duration) return reply({ content: "Gunakan: `sqs timeout @user 10m alasan`", flags: MessageFlags.Ephemeral });
+    if (!target || !duration) return reply({ content: "Gunakan: `ccs timeout @user 10m alasan`", flags: MessageFlags.Ephemeral });
 
     await target.timeout(duration, reason).catch(() => null);
     await sendLog(guild, "⏳ User Timeout", `User: ${target}\nDurasi: ${durationInput}\nReason: ${reason}`, "Orange", {
@@ -754,7 +754,7 @@ async function runAction(ctx, cmd, args = []) {
 
   if (cmd === "untimeout") {
     const target = isInteraction ? ctx.options.getMember("user") : ctx.mentions.members.first();
-    if (!target) return reply({ content: "Gunakan: `sqs untimeout @user`", flags: MessageFlags.Ephemeral });
+    if (!target) return reply({ content: "Gunakan: `ccs untimeout @user`", flags: MessageFlags.Ephemeral });
 
     await target.timeout(null).catch(() => null);
     await sendLog(guild, "✅ Timeout Removed", `User: ${target}\nMod: ${user}`, "Green", {
@@ -766,7 +766,7 @@ async function runAction(ctx, cmd, args = []) {
     return reply({ embeds: [modernEmbed("✅ Untimeout", `${target} sudah bebas timeout.`, "Green")] });
   }
 
-  return reply({ embeds: [modernEmbed("❔ Unknown Command", "Gunakan `sqs help` atau `/panel`.", "Orange")] });
+  return reply({ embeds: [modernEmbed("❔ Unknown Command", "Gunakan `ccs help` atau `/panel`.", "Orange")] });
 }
 
 client.once("clientReady", async () => {
@@ -795,14 +795,14 @@ client.on("interactionCreate", async (interaction) => {
 
     const id = interaction.customId;
 
-    if (id === "sqs_panel_status") {
+    if (id === "ccs_panel_status") {
       return interaction.reply({
         embeds: [modernEmbed("📊 Security Status", await statusDescription(interaction.guild), "Green")],
         flags: MessageFlags.Ephemeral,
       });
     }
 
-    if (id === "sqs_panel_config") {
+    if (id === "ccs_panel_config") {
       const cfg = await getConfig(interaction.guild);
       return interaction.reply({
         embeds: [modernEmbed("⚙️ Server Config", configText(cfg), "Blue")],
@@ -810,7 +810,7 @@ client.on("interactionCreate", async (interaction) => {
       });
     }
 
-    if (id === "sqs_panel_toggle") {
+    if (id === "ccs_panel_toggle") {
       const cfg = await getConfig(interaction.guild);
       const saved = await updateConfig(interaction.guild, { securityEnabled: !cfg.securityEnabled });
       return interaction.update({
@@ -819,29 +819,29 @@ client.on("interactionCreate", async (interaction) => {
       });
     }
 
-    if (id === "sqs_panel_lock") {
+    if (id === "ccs_panel_lock") {
       await interaction.channel.permissionOverwrites.edit(interaction.guild.roles.everyone, { SendMessages: false });
       await sendLog(interaction.guild, "🔒 Channel Locked", `${interaction.channel} dikunci oleh ${interaction.user}`, "Orange");
       return interaction.reply({ embeds: [modernEmbed("🔒 Locked", "Channel ini dikunci.", "Orange")], flags: MessageFlags.Ephemeral });
     }
 
-    if (id === "sqs_panel_unlock") {
+    if (id === "ccs_panel_unlock") {
       await interaction.channel.permissionOverwrites.edit(interaction.guild.roles.everyone, { SendMessages: null });
       await sendLog(interaction.guild, "🔓 Channel Unlocked", `${interaction.channel} dibuka oleh ${interaction.user}`, "Green");
       return interaction.reply({ embeds: [modernEmbed("🔓 Unlocked", "Channel ini dibuka.", "Green")], flags: MessageFlags.Ephemeral });
     }
 
-    if (id === "sqs_panel_lockdown") {
+    if (id === "ccs_panel_lockdown") {
       const count = await lockdownGuild(interaction.guild, interaction.user.tag);
       return interaction.reply({ embeds: [modernEmbed("🚨 Lockdown", `Semua channel berhasil dikunci.\nTotal: **${count}**`, "DarkRed")] });
     }
 
-    if (id === "sqs_panel_unlockall") {
+    if (id === "ccs_panel_unlockall") {
       const count = await unlockGuild(interaction.guild, interaction.user.tag);
       return interaction.reply({ embeds: [modernEmbed("✅ Unlock All", `Semua channel berhasil dibuka.\nTotal: **${count}**`, "Green")] });
     }
 
-    if (id === "sqs_panel_clear10") {
+    if (id === "ccs_panel_clear10") {
       await interaction.channel.bulkDelete(10, true).catch(() => {});
       return interaction.reply({
         embeds: [modernEmbed("🧹 Clear 10", "10 pesan terakhir berhasil dihapus.", "Green")],
