@@ -204,7 +204,7 @@ function modernEmbed(title, desc, color = "Blurple") {
   return new EmbedBuilder()
     .setColor(color)
     .setAuthor({
-      name: "SteakQurban Security",
+      name: "Cosmic Corner Security",
       iconURL: client.user?.displayAvatarURL(),
     })
     .setTitle(title)
@@ -255,7 +255,7 @@ async function sendLog(guild, title, desc, color = "Red", data = {}) {
   const embed = new EmbedBuilder()
     .setColor(color)
     .setAuthor({
-      name: "SteakQurban Security Logs",
+      name: "Cosmic Corner Logs",
       iconURL: client.user?.displayAvatarURL(),
     })
     .setTitle(title)
@@ -302,10 +302,10 @@ async function panelEmbed(guild) {
   return new EmbedBuilder()
     .setColor(cfg.securityEnabled ? "Green" : "Red")
     .setAuthor({
-      name: "SteakQurban Security",
+      name: "Cosmic Corner Security",
       iconURL: client.user?.displayAvatarURL(),
     })
-    .setTitle("🛡️ Public Security Control Panel")
+    .setTitle("🛡️ Security Control Panel")
     .setDescription("Dashboard keamanan modern untuk kontrol cepat server.")
     .addFields(
       {
@@ -334,13 +334,13 @@ async function panelEmbed(guild) {
         inline: false,
       }
     )
-    .setFooter({ text: "CCS Public Panel • Admin Only" })
+    .setFooter({ text: "Cosmic Corner Panel • Admin Only" })
     .setTimestamp();
 }
 
 function helpEmbed() {
   return modernEmbed(
-    "🛡️ CCS Public Commands",
+    "🛡️ Cosmic Corner Commands",
     [
       "**Prefix Commands**",
       "`ccs setup` — auto setup config server",
