@@ -16,8 +16,10 @@ const mongoose = require("mongoose");
 const express = require("express");
 const session = require("express-session");
 const path = require("path");
+const crypto = require("crypto");
 
 const PREFIX = "ccs";
+const BRAND_NAME = "Cosmic Corner";
 
 const client = new Client({
   intents: [
@@ -37,6 +39,21 @@ const spamMap = new Map();
 const joinMap = new Map();
 const warnMap = new Map();
 const dangerMap = new Map();
+
+// Bersihin entry lama tiap 5 menit biar map ini gak numpuk terus di memory
+// selama bot uptime lama (sebelumnya gak pernah dibersihkan sama sekali).
+setInterval(() => {
+  const now = Date.now();
+  const STALE_MS = 5 * 60 * 1000;
+
+  for (const map of [spamMap, joinMap, dangerMap]) {
+    for (const [key, timestamps] of map) {
+      const fresh = timestamps.filter((t) => now - t < STALE_MS);
+      if (!fresh.length) map.delete(key);
+      else map.set(key, fresh);
+    }
+  }
+}, 5 * 60 * 1000).unref();
 
 const DEFAULT_CONFIG = {
   securityEnabled: process.env.SECURITY_ENABLED !== "false",
@@ -204,12 +221,12 @@ function modernEmbed(title, desc, color = "Blurple") {
   return new EmbedBuilder()
     .setColor(color)
     .setAuthor({
-      name: "Cosmic Corner Security",
+      name: `${BRAND_NAME} Security`,
       iconURL: client.user?.displayAvatarURL(),
     })
     .setTitle(title)
     .setDescription(desc || "Tidak ada deskripsi.")
-    .setFooter({ text: "Security System • Cosmic Corner Public" })
+    .setFooter({ text: `Security System • ${BRAND_NAME}` })
     .setTimestamp();
 }
 
@@ -255,7 +272,7 @@ async function sendLog(guild, title, desc, color = "Red", data = {}) {
   const embed = new EmbedBuilder()
     .setColor(color)
     .setAuthor({
-      name: "Cosmic Corner Logs",
+      name: `${BRAND_NAME} Logs`,
       iconURL: client.user?.displayAvatarURL(),
     })
     .setTitle(title)
@@ -268,7 +285,7 @@ async function sendLog(guild, title, desc, color = "Red", data = {}) {
       { name: "Reason", value: cutText(data.reason || "Tidak ada", 1024), inline: false },
       { name: "Server", value: `${guild.name} (${guild.id})`, inline: false }
     )
-    .setFooter({ text: "Cosmic Corner Logging • Audit Trail" })
+    .setFooter({ text: `${BRAND_NAME} Logging • Audit Trail` })
     .setTimestamp();
 
   await ch.send({ embeds: [embed] }).catch(() => {});
@@ -297,24 +314,43 @@ function panelRows() {
   return [row1, row2];
 }
 
+function moduleStatus(enabled) {
+  return enabled ? "🟢 ON" : "🔴 OFF";
+}
+
 async function panelEmbed(guild) {
   const cfg = await getConfig(guild);
   return new EmbedBuilder()
     .setColor(cfg.securityEnabled ? "Green" : "Red")
     .setAuthor({
-      name: "Cosmic Corner Security",
+      name: `${BRAND_NAME} Security`,
       iconURL: client.user?.displayAvatarURL(),
     })
+    .setThumbnail(guild.iconURL?.() || null)
     .setTitle("🛡️ Security Control Panel")
-    .setDescription("Dashboard keamanan modern untuk kontrol cepat server.")
+    .setDescription(
+      cfg.securityEnabled
+        ? "Semua sistem berjalan. Gunakan tombol di bawah untuk kontrol cepat."
+        : "⚠️ Security **OFF** — server ini sedang tidak dilindungi."
+    )
     .addFields(
       {
-        name: "Protection",
+        name: "Perlindungan Chat",
         value: [
-          `Security: **${cfg.securityEnabled ? "ON" : "OFF"}**`,
-          `Anti Spam: **${cfg.antiSpam ? "ON" : "OFF"}**`,
-          `Anti Invite: **${cfg.antiInvite ? "ON" : "OFF"}**`,
-          `Anti Nuke: **${cfg.antiNuke ? "ON" : "OFF"}**`,
+          `Anti Invite: **${moduleStatus(cfg.antiInvite)}**`,
+          `Anti Spam: **${moduleStatus(cfg.antiSpam)}**`,
+          `Anti Badword: **${moduleStatus(cfg.antiBadword)}**`,
+          `Anti Caps: **${moduleStatus(cfg.antiCaps)}**`,
+          `Anti Mention: **${moduleStatus(cfg.antiMention)}**`,
+        ].join("\n"),
+        inline: true,
+      },
+      {
+        name: "Perlindungan Server",
+        value: [
+          `Anti Raid: **${moduleStatus(cfg.antiRaid)}**`,
+          `Anti Nuke: **${moduleStatus(cfg.antiNuke)}**`,
+          `Master Switch: **${moduleStatus(cfg.securityEnabled)}**`,
         ].join("\n"),
         inline: true,
       },
@@ -326,7 +362,7 @@ async function panelEmbed(guild) {
           `Caps: **${cfg.capsPercent}%**`,
           `Timeout: **${cfg.punishmentDuration}**`,
         ].join("\n"),
-        inline: true,
+        inline: false,
       },
       {
         name: "Server",
@@ -334,13 +370,13 @@ async function panelEmbed(guild) {
         inline: false,
       }
     )
-    .setFooter({ text: "Cosmic Corner Panel • Admin Only" })
+    .setFooter({ text: `${BRAND_NAME} Panel • Admin Only` })
     .setTimestamp();
 }
 
 function helpEmbed() {
   return modernEmbed(
-    "🛡️ Cosmic Corner Commands",
+    `🛡️ ${BRAND_NAME} Commands`,
     [
       "**Prefix Commands**",
       "`ccs setup` — auto setup config server",
@@ -1137,7 +1173,15 @@ client.on("guildBanRemove", async (ban) => {
 });
 
 client.on("webhooksUpdate", async (channel) => {
-  const entry = await fetchLatestAudit(channel.guild, AuditLogEvent.WebhookCreate);
+  const candidates = await Promise.all(
+    [AuditLogEvent.WebhookCreate, AuditLogEvent.WebhookUpdate, AuditLogEvent.WebhookDelete].map((type) =>
+      fetchLatestAudit(channel.guild, type)
+    )
+  );
+  const entry = candidates
+    .filter(Boolean)
+    .sort((a, b) => b.createdTimestamp - a.createdTimestamp)[0];
+
   await sendLog(channel.guild, "🪝 Webhook Activity", `Webhook berubah di ${channel}`, "Orange", {
     executor: entry?.executor ? `${entry.executor.tag} (${entry.executor.id})` : "Unknown",
     target: `${channel.name} (${channel.id})`,
@@ -1151,16 +1195,59 @@ client.on("webhooksUpdate", async (channel) => {
 // ================= WEB DASHBOARD + ADMIN LOGIN =================
 const app = express();
 
+// Kalau dashboard dijalankan di belakang reverse proxy (Railway, Nginx, dll),
+// ini perlu supaya secure cookie & IP asli (buat rate limit) kebaca dengan benar.
+app.set("trust proxy", 1);
+
+if (!process.env.DASHBOARD_USERNAME || !process.env.DASHBOARD_PASSWORD) {
+  console.warn(
+    "⚠️  DASHBOARD_USERNAME / DASHBOARD_PASSWORD belum diset. Dashboard pakai kredensial default (admin/admin123). WAJIB diganti sebelum dashboard bisa diakses publik."
+  );
+}
+if (!process.env.DASHBOARD_SECRET) {
+  console.warn(
+    "⚠️  DASHBOARD_SECRET belum diset. Session pakai secret default yang tidak aman. Set DASHBOARD_SECRET (string acak panjang) sebelum deploy ke publik."
+  );
+}
+
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
-app.use(session({
-  secret: process.env.DASHBOARD_SECRET || "change-this-dashboard-secret",
-  resave: false,
-  saveUninitialized: false,
-  cookie: { maxAge: 1000 * 60 * 60 * 12 },
-}));
+app.use(
+  session({
+    name: "cosmiccorner.sid",
+    secret: process.env.DASHBOARD_SECRET || "change-this-dashboard-secret",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 1000 * 60 * 60 * 12,
+      httpOnly: true,
+      sameSite: "lax",
+      // Set DASHBOARD_SECURE_COOKIE=true di env kalau dashboard sudah jalan di HTTPS.
+      // Default false biar gak diam-diam ngunci login di deployment tanpa HTTPS.
+      secure: process.env.DASHBOARD_SECURE_COOKIE === "true",
+    },
+  })
+);
+
+// ---- CSRF protection (token per-session, dicocokkan di setiap POST) ----
+app.use((req, res, next) => {
+  if (!req.session.csrfToken) {
+    req.session.csrfToken = crypto.randomBytes(24).toString("hex");
+  }
+  res.locals.csrfToken = req.session.csrfToken;
+  res.locals.brand = BRAND_NAME;
+  next();
+});
+
+function verifyCsrf(req, res, next) {
+  const token = req.body?._csrf;
+  if (!token || token !== req.session.csrfToken) {
+    return res.status(403).send("Sesi tidak valid atau kadaluarsa. Silakan refresh halaman dan coba lagi.");
+  }
+  next();
+}
 
 function dashboardAuth(req, res, next) {
   if (req.session?.loggedIn) return next();
@@ -1171,23 +1258,69 @@ function dashBool(value) {
   return value === "on" || value === "true" || value === true;
 }
 
+// ---- Rate limit + timing-safe compare buat login ----
+const loginAttempts = new Map(); // ip -> { count, firstAttempt, lockedUntil }
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_WINDOW_MS = 10 * 60 * 1000;
+const LOGIN_LOCKOUT_MS = 15 * 60 * 1000;
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of loginAttempts) {
+    if ((!entry.lockedUntil || entry.lockedUntil < now) && now - entry.firstAttempt > LOGIN_WINDOW_MS) {
+      loginAttempts.delete(ip);
+    }
+  }
+}, LOGIN_WINDOW_MS).unref();
+
+function getClientIp(req) {
+  return req.ip || req.connection?.remoteAddress || "unknown";
+}
+
+// Bandingin string pakai hash + timingSafeEqual, jadi gak bocorin info dari
+// selisih waktu compare (timing attack) dan gak masalah kalau panjangnya beda.
+function safeCompare(a, b) {
+  const bufA = crypto.createHash("sha256").update(String(a ?? "")).digest();
+  const bufB = crypto.createHash("sha256").update(String(b ?? "")).digest();
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
 app.get("/login", (req, res) => {
   res.render("login", { error: null });
 });
 
-app.post("/login", (req, res) => {
+app.post("/login", verifyCsrf, (req, res) => {
+  const ip = getClientIp(req);
+  const now = Date.now();
+  const attempt = loginAttempts.get(ip);
+
+  if (attempt?.lockedUntil && now < attempt.lockedUntil) {
+    const waitMin = Math.ceil((attempt.lockedUntil - now) / 60000);
+    return res.status(429).render("login", {
+      error: `Terlalu banyak percobaan gagal. Coba lagi dalam ${waitMin} menit.`,
+    });
+  }
+
   const username = process.env.DASHBOARD_USERNAME || "admin";
   const password = process.env.DASHBOARD_PASSWORD || "admin123";
+  const ok = safeCompare(req.body.username, username) && safeCompare(req.body.password, password);
 
-  if (req.body.username === username && req.body.password === password) {
+  if (ok) {
+    loginAttempts.delete(ip);
     req.session.loggedIn = true;
+    req.session.csrfToken = crypto.randomBytes(24).toString("hex"); // rotate token setelah login
     return res.redirect("/");
   }
+
+  const entry = attempt && now - attempt.firstAttempt <= LOGIN_WINDOW_MS ? attempt : { count: 0, firstAttempt: now };
+  entry.count += 1;
+  if (entry.count >= LOGIN_MAX_ATTEMPTS) entry.lockedUntil = now + LOGIN_LOCKOUT_MS;
+  loginAttempts.set(ip, entry);
 
   return res.render("login", { error: "Username atau password salah." });
 });
 
-app.post("/logout", dashboardAuth, (req, res) => {
+app.post("/logout", dashboardAuth, verifyCsrf, (req, res) => {
   req.session.destroy(() => res.redirect("/login"));
 });
 
@@ -1231,7 +1364,7 @@ app.get("/guild/:guildId", dashboardAuth, async (req, res) => {
   });
 });
 
-app.post("/guild/:guildId/config", dashboardAuth, async (req, res) => {
+app.post("/guild/:guildId/config", dashboardAuth, verifyCsrf, async (req, res) => {
   const guild = client.guilds.cache.get(req.params.guildId);
   if (!guild) return res.status(404).send("Guild tidak ditemukan.");
 
@@ -1276,7 +1409,7 @@ app.post("/guild/:guildId/config", dashboardAuth, async (req, res) => {
   return res.redirect(`/guild/${guild.id}?saved=1`);
 });
 
-app.post("/guild/:guildId/reset", dashboardAuth, async (req, res) => {
+app.post("/guild/:guildId/reset", dashboardAuth, verifyCsrf, async (req, res) => {
   const guild = client.guilds.cache.get(req.params.guildId);
   if (!guild) return res.status(404).send("Guild tidak ditemukan.");
 
