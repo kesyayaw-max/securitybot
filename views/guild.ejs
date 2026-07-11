@@ -1,0 +1,135 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="/style.css">
+  <title><%= guild.name %> • Cosmic Corner</title>
+</head>
+<body>
+  <%
+    const groups = [
+      {
+        title: "Master Switch",
+        items: [
+          ["securityEnabled", "Security System", "Saklar utama. Kalau OFF, semua modul di bawah otomatis ikut nonaktif."],
+        ],
+      },
+      {
+        title: "Perlindungan Chat",
+        items: [
+          ["antiInvite", "Anti Invite", "Hapus otomatis link invite Discord dari server lain."],
+          ["antiSpam", "Anti Spam", "Timeout otomatis kalau user kirim pesan terlalu cepat."],
+          ["antiBadword", "Anti Badword", "Hapus pesan yang mengandung kata di daftar terlarang."],
+          ["antiCaps", "Anti Caps", "Deteksi & hapus pesan huruf kapital berlebihan."],
+          ["antiMention", "Anti Mention", "Cegah mass-mention / mention spam ke banyak user sekaligus."],
+        ],
+      },
+      {
+        title: "Perlindungan Server",
+        items: [
+          ["antiRaid", "Anti Raid", "Deteksi lonjakan member join dalam waktu singkat, lalu timeout otomatis."],
+          ["antiNuke", "Anti Nuke", "Auto lockdown + ban kalau ada percobaan mass-delete channel / role."],
+        ],
+      },
+    ];
+  %>
+  <nav>
+    <div class="brand">
+      <div class="brand-orb <%= cfg.securityEnabled ? '' : 'off' %>"></div>
+      <div>
+        <b><%= guild.name %></b>
+        <span class="meta">Live Config Editor</span>
+      </div>
+    </div>
+    <a class="ghost" href="/">← Semua Server</a>
+  </nav>
+
+  <main>
+    <% if (saved) { %><div class="ok">✅ Config berhasil disimpan.</div><% } %>
+    <% if (error) { %><div class="err"><%= error %></div><% } %>
+
+    <form class="card form" method="POST" action="/guild/<%= guild.id %>/config">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <h1>Security Config</h1>
+      <p class="sub">Perubahan berlaku langsung ke bot, tanpa perlu restart.</p>
+
+      <% groups.forEach(group => { %>
+        <div class="group">
+          <div class="group-title"><%= group.title %></div>
+          <div class="toggles">
+            <% group.items.forEach(([key, label, desc]) => { %>
+              <div class="toggle-row">
+                <div class="label">
+                  <b><%= label %></b>
+                  <small><%= desc %></small>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" name="<%= key %>" <%= cfg[key] ? "checked" : "" %>>
+                  <span class="track"></span>
+                  <span class="thumb"></span>
+                </label>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+      <% }) %>
+
+      <div class="group">
+        <div class="group-title">Parameter</div>
+        <div class="fields">
+          <label>Spam Limit (pesan)
+            <input type="number" name="spamLimit" value="<%= cfg.spamLimit %>" min="2" max="50">
+          </label>
+          <label>Spam Time (detik)
+            <input type="number" name="spamTime" value="<%= Math.floor(cfg.spamTime/1000) %>" min="3" max="120">
+          </label>
+          <label>Mention Limit
+            <input type="number" name="mentionLimit" value="<%= cfg.mentionLimit %>" min="2" max="50">
+          </label>
+          <label>Caps Percent (%)
+            <input type="number" name="capsPercent" value="<%= cfg.capsPercent %>" min="40" max="100">
+          </label>
+          <label>Timeout Punishment
+            <input name="punishmentDuration" value="<%= cfg.punishmentDuration %>" placeholder="10m, 1h, 1d">
+          </label>
+          <label>Raid Join Limit
+            <input type="number" name="raidJoinLimit" value="<%= cfg.raidJoinLimit %>" min="2" max="50">
+          </label>
+          <label>Raid Join Time (detik)
+            <input type="number" name="raidJoinTime" value="<%= Math.floor(cfg.raidJoinTime/1000) %>" min="3" max="300">
+          </label>
+          <label>Bad Words (pisahkan koma)
+            <input name="badWords" value="<%= (cfg.badWords || []).join(', ') %>">
+          </label>
+          <label>Log Channel
+            <select name="logChannelId">
+              <option value="">Tidak diset</option>
+              <% channels.forEach(c => { %>
+                <option value="<%= c.id %>" <%= cfg.logChannelId === c.id ? "selected" : "" %>>#<%= c.name %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>Whitelist Role (bypass)
+            <select name="whitelistRoleId">
+              <option value="">Tidak diset</option>
+              <% roles.forEach(r => { %>
+                <option value="<%= r.id %>" <%= cfg.whitelistRoleId === r.id ? "selected" : "" %>>@<%= r.name %></option>
+              <% }) %>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <button>Save Live Config</button>
+    </form>
+
+    <form class="danger-zone" method="POST" action="/guild/<%= guild.id %>/reset">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="dz-title">⚠️ Danger Zone</div>
+      <p>Reset semua config server ini kembali ke default. Tidak bisa dibatalkan.</p>
+      <button class="danger">Reset Config</button>
+    </form>
+  </main>
+</body>
+</html>

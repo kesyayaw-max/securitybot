@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="/style.css">
+  <title>Cosmic Corner • Control Center</title>
+</head>
+<body>
+  <nav>
+    <div class="brand">
+      <div class="brand-orb <%= dbStatus === 'Connected' ? '' : 'off' %>"></div>
+      <div>
+        <b>Cosmic Corner</b>
+        <span class="meta">Bot: <%= bot?.tag || "-" %> • DB: <%= dbStatus %></span>
+      </div>
+    </div>
+    <form method="POST" action="/logout">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <button class="ghost">Logout</button>
+    </form>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <div class="eyebrow">Security Control Center</div>
+      <h1>Pilih server untuk dikonfigurasi</h1>
+      <p><%= guilds.length %> server terhubung ke Cosmic Corner. Klik salah satu untuk atur proteksi secara live.</p>
+    </section>
+
+    <section class="grid">
+      <% guilds.forEach(g => { %>
+        <a class="card guild" href="/guild/<%= g.id %>">
+          <h3><%= g.name %></h3>
+          <p><%= g.memberCount || 0 %> members</p>
+          <span class="tag">Kelola →</span>
+        </a>
+      <% }) %>
+    </section>
+
+    <footer class="hint">Cosmic Corner Security • Dashboard internal, jangan bagikan akses ke pihak yang tidak dipercaya.</footer>
+  </main>
+</body>
+</html>

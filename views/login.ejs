@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="/style.css">
+  <title>Login • Cosmic Corner</title>
+</head>
+<body class="auth">
+  <main class="card login">
+    <div class="brand-orb"></div>
+    <h1>Cosmic Corner</h1>
+    <p>Masuk untuk mengakses Security Control Center</p>
+
+    <% if (error) { %><div class="err"><%= error %></div><% } %>
+
+    <form method="POST" action="/login">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input name="username" placeholder="Username" autocomplete="username" required>
+      <input name="password" type="password" placeholder="Password" autocomplete="current-password" required>
+      <button>Masuk</button>
+    </form>
+  </main>
+</body>
+</html>
